@@ -595,7 +595,8 @@ async function toggleVoice() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { toast("Bu tarayıcı ses kaydını desteklemiyor."); return; }
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (e) { toast("Mikrofona erişilemedi. Tarayıcıda ya da sayfanın İzinler menüsünde mikrofon iznini aç."); return; }
+  // Artifact çerçevesi mikrofona izin vermiyor (İzinler menüsünde de çıkmaz); sesli sohbet ayrı sayfada çalışır.
+  catch (e) { toast("Claude sayfası mikrofona izin vermiyor. Sesli sohbet için 📞 düğmesini kullan; yeni sekmede açılır."); return; }
   const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
   const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], start = Date.now();
   const tick = setInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
