@@ -560,6 +560,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .vcall.on #vc-join:hover { background: var(--danger); }
 .vcall #vc-mute.muted { background: var(--danger); border-color: var(--danger); color: #fff; }
 .vcall .vc-who { color: var(--muted); }
+.vcall .vc-url { flex: 1 1 180px; min-width: 0; max-width: 100%; font: inherit; font-size: 12px; padding: 3px 8px; border: 1.5px solid var(--teal); border-radius: 8px; background: transparent; color: var(--ink); }
 .vcall .vc-who .talk { color: var(--teal); }
 .pst { font: 11px/1 var(--f-mono); color: var(--muted); }
 .pingbar { position: fixed; z-index: 35; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 12px); width: min(540px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
