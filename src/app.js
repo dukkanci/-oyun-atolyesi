@@ -1358,7 +1358,7 @@ const PRES = { on: "çevrimiçi", away: "arka planda", off: "çevrimdışı" };
 S.online = {};
 async function startPresence() {
   const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
-  if (!room) return;
+  if (!room) return voiceFallback();
   S.room = room;
   const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
   push();
@@ -1392,8 +1392,19 @@ async function startPresence() {
 }
 /* live voice chat: WebRTC audio between everyone who joined, signalled over room topic "voice";
    presence.voice marks who is in the call, and of each pair the lower peer label sends the offer */
+// Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
+function openVoicePage() {
+  window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
+  toast("Sesli sohbet yeni sekmede açılıyor");
+}
+/* room yoksa da 📞 görünsün: doğrudan GitHub sayfasını açar */
+function voiceFallback() {
+  $("vcall").hidden = false;
+  $("vc-join").textContent = "📞 Sesli sohbet başlat";
+  $("vc-join").addEventListener("click", openVoicePage);
+}
 function startVoiceCall(room) {
-  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return voiceFallback();
   const V = { me: null, stream: null, muted: false, pcs: {}, pend: {} };
   const box = $("vcall"); box.hidden = false;
   const sig = (to, kind, extra) => room.emit("voice", Object.assign({ to, kind }, extra)).catch(() => {});
@@ -1486,10 +1497,7 @@ function startVoiceCall(room) {
     try {
       V.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
     } catch (e) {
-      // Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
-      window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
-      toast("Sesli sohbet yeni sekmede açılıyor");
-      return;
+      return openVoicePage();
     }
     V.muted = false;
     room.presence({ voice: true, vm: false }).catch(() => {});
