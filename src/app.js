@@ -1484,7 +1484,12 @@ function startVoiceCall(room) {
     if (V.stream) return leave();
     try {
       V.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    } catch (e) { toast("Mikrofona izin verilmedi"); return; }
+    } catch (e) {
+      // Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
+      window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
+      toast("Sesli sohbet yeni sekmede açılıyor");
+      return;
+    }
     V.muted = false;
     room.presence({ voice: true, vm: false }).catch(() => {});
     sync();
