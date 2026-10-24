@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atölye Sesli Sohbet</title>
+<style>
+:root{--bg:#f6f4ef;--fg:#1f1d1a;--mut:#6b665e;--card:#fff;--acc:#d9622b;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1a18;--fg:#f1eee8;--mut:#a39d93;--card:#262421;--acc:#f08a4b;--bad:#f2b8b5}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:420px;text-align:center;box-shadow:0 2px 12px #0002}
+h1{font-size:1.3rem;margin:0 0 8px}
+p{color:var(--mut);margin:8px 0}
+button{font:inherit;border:0;border-radius:999px;padding:12px 20px;margin:6px;cursor:pointer;background:var(--acc);color:#fff}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--mut)}
+#st.err{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎙️ Atölye Sesli Sohbet</h1>
+  <p id="st">Katılmak için düğmeye bas.</p>
+  <div>
+    <button type="button" id="join">📞 Sesli sohbete katıl</button>
+    <button type="button" id="mute" class="sec" hidden>🎙️ Mikrofonu kapat</button>
+    <button type="button" id="leave" class="sec" hidden>📴 Ayrıl</button>
+  </div>
+  <p>Bu sekme açık kaldığı sürece sohbette kalırsın.</p>
+</main>
+<div id="audios" hidden></div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+// Atölye'deki Artifact mikrofona erişemediği için sesli sohbet burada, PeerJS ile çalışır.
+// Oda = URL'deki # sonrası (takımın team/settings.createdAt değeri). Her kişi atolye-<oda>-<n> yuvasını alır.
+const SLOTS = 8;
+const room = location.hash.slice(1).replace(/[^\w-]/g, "");
+const $ = id => document.getElementById(id);
+const st = (t, err) => { $("st").textContent = t; $("st").className = err ? "err" : ""; };
+let peer = null, stream = null, slot = -1, muted = false, timer = 0;
+const calls = {}, pend = {};
+
+if (!room) { st("Oda bilgisi yok. Bu sayfayı Atölye'deki sesli sohbet düğmesinden aç.", true); $("join").hidden = true; }
+
+function count() {
+  const n = Object.keys(calls).length;
+  st(n ? "Sohbette " + (n + 1) + " kişi var." : "Bağlandın. Diğerlerinin katılması bekleniyor…");
+}
+
+function bind(c) {
+  c.on("stream", s => {
+    calls[c.peer] = c; delete pend[c.peer];
+    let a = $("a-" + c.peer);
+    if (!a) { a = document.createElement("audio"); a.id = "a-" + c.peer; a.autoplay = true; $("audios").appendChild(a); }
+    a.srcObject = s; a.play().catch(() => {});
+    count();
+  });
+  const drop = () => {
+    if (calls[c.peer] === c) { delete calls[c.peer]; const a = $("a-" + c.peer); if (a) a.remove(); if (peer) count(); }
+  };
+  c.on("close", drop); c.on("error", drop);
+}
+
+// Çift bağlantı olmasın diye sadece küçük yuva büyük yuvayı arar; boş yuvalar arada bir yeniden denenir.
+function dial() {
+  for (let j = slot + 1; j < SLOTS; j++) {
+    const id = "atolye-" + room + "-" + j;
+    if (calls[id]) continue;
+    if (pend[id]) pend[id].close();
+    pend[id] = peer.call(id, stream);
+    if (pend[id]) bind(pend[id]);
+  }
+}
+
+function claim(i) {
+  if (i >= SLOTS) { st("Oda dolu (en fazla " + SLOTS + " kişi).", true); leave(); return; }
+  const p = new Peer("atolye-" + room + "-" + i);
+  p.on("open", () => {
+    peer = p; slot = i; count(); dial();
+    timer = setInterval(dial, 6000);
+  });
+  p.on("call", c => { c.answer(stream); bind(c); });
+  p.on("error", e => {
+    if (e.type === "unavailable-id") { p.destroy(); claim(i + 1); }
+    else if (e.type === "peer-unavailable") {} // boş yuva, normal
+    else if (!peer) { st("Bağlantı kurulamadı: " + e.type, true); leave(); }
+  });
+  p.on("disconnected", () => { if (peer === p) p.reconnect(); });
+}
+
+function leave() {
+  clearInterval(timer);
+  if (peer) peer.destroy();
+  peer = null; slot = -1;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  for (const k in calls) delete calls[k];
+  for (const k in pend) delete pend[k];
+  $("audios").textContent = "";
+  $("join").hidden = !room; $("mute").hidden = $("leave").hidden = true;
+}
+
+$("join").onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch (e) { st("Mikrofona izin verilmedi. Tarayıcı ayarlarından izin verip tekrar dene.", true); return; }
+  muted = false; $("mute").textContent = "🎙️ Mikrofonu kapat";
+  $("join").hidden = true; $("mute").hidden = $("leave").hidden = false;
+  st("Bağlanıyor…");
+  claim(0);
+};
+$("mute").onclick = () => {
+  muted = !muted;
+  stream.getAudioTracks().forEach(t => t.enabled = !muted);
+  $("mute").textContent = muted ? "🔇 Mikrofonu aç" : "🎙️ Mikrofonu kapat";
+};
+$("leave").onclick = () => { leave(); st("Sohbetten ayrıldın."); };
+window.addEventListener("pagehide", leave);
+</script>
+</body>
+</html>
