@@ -1,0 +1,15 @@
+# Üretilen yayın dosyası (node build.js ile oluşur)
+dist/
+
+# Repoya girmeyecek yerel dosyalar
+atolye.rar
+*.rar
+*.pdf
+
+# Claude Code yerel ayarları (bilgisayara özel yollar içerir)
+.claude/
+
+# Sistem dosyaları
+Thumbs.db
+desktop.ini
+.DS_Store

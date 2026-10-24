@@ -1,0 +1,9 @@
+{
+  "name": "oyun-atolyesi",
+  "private": true,
+  "description": "Oyun Atölyesi — claude.ai Artifact olarak yayınlanan tek sayfalık ekip uygulaması",
+  "scripts": {
+    "build": "node build.js",
+    "check": "node build.js --check"
+  }
+}
