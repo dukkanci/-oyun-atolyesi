@@ -1,0 +1,241 @@
+
+<!-- loading -->
+<section id="s-loading" class="gate">
+  <div class="gate-card"><span class="label">Oyun Atölyesi</span><p>Atölye açılıyor…</p></div>
+</section>
+
+<!-- no db access -->
+<section id="s-noaccess" class="gate" hidden>
+  <div class="gate-card">
+    <h1>Atölyeye ulaşılamıyor</h1>
+    <p>Bu sayfa notları claude.ai üzerinde saklar. Görmek için claude.ai hesabınla giriş yapmış olman ve sayfanın sahibinin seni davet etmiş olması gerekiyor.</p>
+  </div>
+</section>
+
+<!-- first-time setup -->
+<section id="s-setup" class="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
+    <h1>Atölyeyi kur</h1>
+    <p>Oyununuza bir çalışma adı verin ve ikinizin kullanacağı ekip şifresini belirleyin. Şifreyi arkadaşına sen söyleyeceksin.</p>
+    <form id="f-setup">
+      <label class="label" for="su-game">Oyunun çalışma adı</label>
+      <input class="field" id="su-game" required maxlength="60" placeholder="ör. Proje Fener">
+      <label class="label" for="su-pass">Ekip şifresi</label>
+      <input class="field" id="su-pass" type="password" required minlength="4" autocomplete="new-password">
+      <label class="label" for="su-pass2">Şifre tekrar</label>
+      <input class="field" id="su-pass2" type="password" required minlength="4" autocomplete="new-password">
+      <p class="err" id="su-err"></p>
+      <button class="btn primary" type="submit">Atölyeyi aç</button>
+    </form>
+  </div>
+</section>
+
+<!-- waiting for setup (cannot write) -->
+<section id="s-wait" class="gate" hidden>
+  <div class="gate-card">
+    <h1>Atölye henüz kurulmadı</h1>
+    <p>Sayfanın sahibi önce oyun adını ve ekip şifresini belirlemeli. Kurulum bitince bu ekran kendiliğinden giriş ekranına döner.</p>
+  </div>
+</section>
+
+<!-- lock -->
+<section id="s-lock" class="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
+    <span class="label">Oyun Atölyesi</span>
+    <h1 id="lock-game">—</h1>
+    <form id="f-lock">
+      <label class="label" for="lk-pass">Ekip şifresi</label>
+      <input class="field" id="lk-pass" type="password" required autocomplete="current-password">
+      <p class="err" id="lk-err"></p>
+      <button class="btn primary" type="submit">Giriş yap</button>
+    </form>
+  </div>
+</section>
+
+<!-- app -->
+<div id="s-app" hidden>
+  <header class="top">
+    <div class="top-in">
+      <div class="brand"><span class="label">Atölye</span><h1 id="game-name">—</h1></div>
+      <div class="menu" id="bellwrap">
+        <button class="bell" id="bell" type="button" aria-expanded="false" aria-label="Bildirimler">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="bparts" id="bell-parts"></span>
+          <span class="bn" id="bell-n">0</span>
+        </button>
+        <div class="pop" id="pop-bell" hidden></div>
+      </div>
+      <div class="people" id="people"></div>
+      <button class="btn ghost" id="btn-sound" type="button" title="Yeni içerik geldiğinde ses çal">Ses açık</button>
+      <div class="menu">
+        <button class="btn ghost" id="btn-settings" aria-expanded="false">Ayarlar</button>
+        <div class="pop" id="pop-settings" hidden>
+          <form id="f-game" style="display:grid;gap:8px">
+            <label class="label" for="st-game">Oyun adı</label>
+            <input class="field" id="st-game" maxlength="60" required>
+            <button class="btn" type="submit">Adı kaydet</button>
+          </form>
+          <form id="f-pass" style="display:grid;gap:8px">
+            <label class="label" for="st-pass">Yeni ekip şifresi</label>
+            <input class="field" id="st-pass" type="password" minlength="4" required autocomplete="new-password">
+            <button class="btn" type="submit">Şifreyi değiştir</button>
+            <span class="hint">Değişince arkadaşın yeni şifreyle tekrar giriş yapar.</span>
+          </form>
+          <div style="display:grid;gap:6px">
+            <span class="label">Profil fotoğrafın</span>
+            <div class="kinds" id="av-list"></div>
+          </div>
+          <div style="display:grid;gap:6px">
+            <span class="label">Bildirim seslerini dinle</span>
+            <div class="kinds" id="snd-list"></div>
+          </div>
+          <button class="btn danger" id="btn-lock">Kilitle ve çık</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="nowrite" id="nowrite" hidden>Notları okuyabiliyorsun ama yazamıyorsun. Sayfanın sahibi Paylaş menüsünden seni <b>Düzenleyici</b> olarak eklemeli; herkese açık link açıksa onu da kapatmalı.</div>
+  <div class="wrap" id="wrap">
+    <aside class="side">
+      <form class="panel" id="f-new">
+        <h2>Yeni not</h2>
+        <input class="field" id="nw-title" placeholder="Başlık" maxlength="120" required>
+        <textarea class="field" id="nw-body" placeholder="Fikrini, mekaniği, hikâye parçasını yaz…"></textarea>
+        <div class="up">
+          <div class="thumbs" id="nw-thumbs"></div>
+          <label class="btn" for="nw-file" id="nw-filebtn">Görsel / video ekle<input type="file" id="nw-file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm" multiple hidden></label>
+          <span class="hint" id="nw-uphint">Sürükleyip bırakabilir ya da Ctrl+V ile yapıştırabilirsin.</span>
+        </div>
+        <span class="label">Tür</span>
+        <div class="kinds" id="nw-kinds"></div>
+        <button class="btn primary" type="submit" id="nw-submit">Notu ekle</button>
+        <p class="err" id="nw-err"></p>
+      </form>
+      <div class="panel">
+        <h2>Göster</h2>
+        <span class="label">Kim yazdı</span>
+        <div class="seg" id="flt-who"></div>
+        <span class="label" id="lbl-status">Durum</span>
+        <div class="seg" id="flt-status" style="grid-template-columns:repeat(4,1fr)"></div>
+        <span class="label">İçerik</span>
+        <div class="seg" id="flt-media" style="grid-template-columns:repeat(4,1fr)"></div>
+        <span class="label">Tür</span>
+        <div class="kinds" id="flt-kinds"></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-active" aria-selected="true">Çalışma masası <span class="n" id="n-active"></span></button>
+        <button type="button" role="tab" id="tab-star" aria-selected="false">★ Yıldızlılar <span class="n" id="n-star"></span></button>
+        <button type="button" role="tab" id="tab-done" aria-selected="false">✓ Bitenler <span class="n" id="n-done"></span></button>
+        <button type="button" role="tab" id="tab-chat" aria-selected="false">Sohbet <span class="n unread" id="n-chat" title="Okunmamış mesaj" hidden></span></button>
+        <button type="button" role="tab" id="tab-ai" aria-selected="false">✦ Claude'a iş ver <span class="n" id="n-ai" title="Sıradaki iş" hidden></span></button>
+        <button type="button" role="tab" id="tab-upd" aria-selected="false">Güncellemeler <span class="n unread" id="n-upd" title="Yeni güncelleme" hidden></span></button>
+      </div>
+      <div class="donesum" id="donesum" hidden></div>
+      <div class="mainbar" id="mainbar">
+        <input class="field" id="q" type="search" placeholder="Notlarda ara">
+        <button class="chip" id="fresh-clear" type="button" aria-pressed="true" hidden>Sadece yeniler ✕</button>
+        <span class="label" id="count"></span>
+      </div>
+      <div class="cards" id="cards"></div>
+      <section class="panel chat" id="chat" hidden>
+        <div class="chat-head"><h2>Sohbet</h2><span class="chat-online" id="chat-online"></span><span class="vcall" id="vcall" hidden><button type="button" id="vc-join">📞 Sesli sohbete katıl</button><button type="button" id="vc-mute" hidden title="Mikrofonu kapat / aç">🎙️</button><span class="vc-who" id="vc-who"></span></span><span class="hint">Fikirlerden ayrı, ikinizin konuşma alanı · Enter gönderir, Shift + Enter yeni satır</span></div>
+        <div class="chat-log" id="chat-log" aria-live="polite"></div>
+        <div class="typing" id="typing" aria-live="polite" hidden></div>
+        <div class="replybar" id="replybar" hidden></div>
+        <div class="epop" id="emoji-pop" hidden></div>
+        <div class="epop" id="poll-pop" hidden></div>
+        <div class="chat-att" id="chat-att" hidden></div>
+        <form class="chat-form" id="f-chat">
+          <label class="btn" for="chat-file" id="chat-filebtn" title="Fotoğraf ya da dosya ekle (Ctrl+V ile de yapıştırabilirsin)">Dosya<input type="file" id="chat-file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,.pdf,.txt,.md,.csv,.json,.mp4,.webm" multiple hidden></label>
+          <button class="btn" type="button" id="emoji-btn" aria-expanded="false" title="Emoji ve sticker">😊</button>
+          <button class="btn" type="button" id="poll-btn" aria-expanded="false" title="Oylama başlat">📊</button>
+          <button class="btn" type="button" id="voice-btn" aria-pressed="false" title="Sesli mesaj kaydet: bir kez tıkla başlasın, tekrar tıkla gönderilsin">🎤</button>
+          <textarea class="field" id="chat-in" rows="2" placeholder="Mesaj yaz, Enter ile gönder · fotoğraf ya da dosyayı Ctrl+V ile yapıştır ya da sürükle…" aria-label="Mesaj"></textarea>
+          <button class="btn primary" type="submit">Gönder</button>
+        </form>
+      </section>
+      <section class="panel chat ai" id="ai" hidden>
+        <div class="chat-head"><h2>Claude'a iş ver</h2><span class="hint">Buraya yazılan işleri Özgür'ün bilgisayarındaki Claude yapar: soru cevaplar, atölyeye not ekler, sayfaya özellik ekler. Herkesin verdiği işler burada herkese görünür.</span></div>
+        <div class="ai-body">
+          <div class="ai-col">
+            <div class="cstat off" id="claude-status"></div>
+            <form class="ai-add" id="f-ai">
+              <label class="label" for="ai-in">Yeni iş</label>
+              <textarea class="field" id="ai-in" rows="5" placeholder="Claude ne yapsın? Örnek: Düşmanlar için 3 farklı davranış fikri yaz ve atölyeye Fikir olarak ekle. Enter gönderir, Shift + Enter yeni satır."></textarea>
+              <button class="btn primary" type="submit">✦ İşi gönder</button>
+            </form>
+            <p class="err" id="ai-err"></p>
+            <p class="hint" style="margin:0">Riskli işler (toplu silme, şifre ya da paylaşım değişikliği gibi) önce Özgür'e sorulur.</p>
+          </div>
+          <div class="ai-col">
+            <span class="label">İşler</span>
+            <div class="ai-runs" id="ai-runs"></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel chat upd" id="upd" hidden>
+        <div class="chat-head"><h2>Güncellemeler</h2><span class="hint">Oyunun ilerlemesi ve sürüm notları. Herkes yeni güncelleme notu ekleyebilir, eklenince herkese bildirim gider.</span></div>
+        <div class="ai-body">
+          <div class="ai-col">
+            <div class="prog">
+              <span class="label">Oyunun durumu</span>
+              <div class="pbar"><i id="upd-bar"></i></div>
+              <div class="prow2">
+                <select class="field" id="upd-phase" aria-label="Aşama"><option value="fikir">Fikir aşaması</option><option value="prototip">Prototip</option><option value="alfa">Alfa</option><option value="beta">Beta</option><option value="yayin">Yayında</option></select>
+                <input type="range" id="upd-pct" min="0" max="100" step="5" value="0" aria-label="Tamamlanma yüzdesi">
+                <b class="mono" id="upd-pctv">%0</b>
+              </div>
+              <span class="hint" id="upd-pmeta"></span>
+            </div>
+            <form class="ai-add" id="f-upd">
+              <span class="label">Yeni güncelleme notu</span>
+              <div class="prow2">
+                <input class="field" id="upd-ver" maxlength="20" placeholder="Sürüm (ör. v0.3)" style="max-width:150px">
+                <select class="field" id="upd-type" aria-label="Tür"><option value="ozellik">Yeni özellik</option><option value="duzeltme">Hata düzeltme</option><option value="icerik">İçerik / hikâye</option><option value="denge">Denge / ayar</option><option value="gorsel">Görsel / ses</option><option value="diger">Diğer</option></select>
+              </div>
+              <input class="field" id="upd-title" maxlength="120" placeholder="Başlık (ör. Envanter sistemi eklendi)" required>
+              <textarea class="field" id="upd-body" rows="5" placeholder="Neler değişti? Maddeler halinde yazabilirsin:&#10;- Yeni düşman tipi&#10;- Zipla hatası düzeltildi"></textarea>
+              <button class="btn primary" type="submit">Güncellemeyi yayınla</button>
+              <p class="err" id="upd-err"></p>
+            </form>
+            <form class="ai-add" id="f-build">
+              <span class="label">Oyunun güncel dosyalarını yükle</span>
+              <div class="prow2">
+                <input class="field" id="bd-ver" maxlength="20" placeholder="Sürüm (ör. v0.4)" style="max-width:150px" required>
+                <input class="field" id="bd-note" maxlength="200" placeholder="Kısa not (ör. Windows test sürümü)">
+              </div>
+              <input class="field" id="bd-file" type="file" multiple aria-label="Dosya seç">
+              <input class="field" id="bd-link" type="url" maxlength="500" placeholder="Ya da bağlantı (Drive, itch.io… büyük zip/exe için)">
+              <span class="hint">Dosya başına en fazla 20 MB, sürüm başına en fazla 5 dosya. Yüklenebilen türler: görsel, PDF, MP4/WEBM, TXT, MD, CSV, JSON. Zip/exe gibi oyun paketleri platforma yüklenemiyor, onlar için bağlantı ekle. Eski sürümler silinmez, geçmişte kalır.</span>
+              <button class="btn primary" type="submit" id="bd-submit">Sürümü yükle</button>
+              <p class="err" id="bd-err"></p>
+            </form>
+          </div>
+          <div class="ai-col">
+            <span class="label">Oyun dosyaları · sürüm geçmişi</span>
+            <div class="ai-runs" id="build-list"></div>
+            <span class="label">Güncelleme geçmişi</span>
+            <div class="ai-runs" id="upd-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel log">
+      <h2>Son hareketler</h2>
+      <div id="events"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="sheet-root"></div>
+<div class="toast" id="toast" hidden></div>
+<div class="notifs" id="notifs" aria-live="polite"></div>
+<div class="pingbar" id="pingbar" role="alert" hidden></div>
+
