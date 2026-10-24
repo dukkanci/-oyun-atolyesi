@@ -1394,8 +1394,22 @@ async function startPresence() {
    presence.voice marks who is in the call, and of each pair the lower peer label sends the offer */
 // Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
 function openVoicePage() {
-  window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
-  toast("Sesli sohbet yeni sekmede açılıyor");
+  const url = "https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || "");
+  let w = null;
+  try { w = window.open(url, "_blank"); } catch (e) {}
+  if (w) return toast("Sesli sohbet yeni sekmede açılıyor");
+  // çerçeve açılır pencereyi engelledi: adresi kopyalanabilir göster
+  toast("Yeni sekme açılamadı. Aşağıdaki adresi kopyalayıp yeni sekmeye yapıştır.");
+  if ($("vc-url")) return $("vc-url").select();
+  const inp = h("input", { id: "vc-url", class: "vc-url", readonly: "", value: url, "aria-label": "Sesli sohbet adresi", onfocus: e => e.target.select() });
+  const copy = h("button", { type: "button", onclick: () => {
+    inp.select();
+    const ok = () => toast("Adres kopyalandı, yeni sekmeye yapıştır");
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(ok, () => toast("Kopyalanamadı; adres seçili, Ctrl+C ile kopyala"));
+    else toast("Adres seçili, Ctrl+C ile kopyala");
+  } }, "Kopyala");
+  $("vcall").append(inp, copy);
+  inp.select();
 }
 /* room yoksa da 📞 görünsün: doğrudan GitHub sayfasını açar */
 function voiceFallback() {
