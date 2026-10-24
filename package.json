@@ -4,6 +4,7 @@
   "description": "Oyun Atölyesi — claude.ai Artifact olarak yayınlanan tek sayfalık ekip uygulaması",
   "scripts": {
     "build": "node build.js",
-    "check": "node build.js --check"
+    "check": "node build.js --check",
+    "yerel": "node yerel/server.js"
   }
 }

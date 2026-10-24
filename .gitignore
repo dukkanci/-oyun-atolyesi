@@ -13,3 +13,6 @@ atolye.rar
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Yerel sunucunun verisi (notlar, sohbet, yüklenen dosyalar)
+yerel/veri/
