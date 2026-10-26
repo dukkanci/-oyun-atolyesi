@@ -17,6 +17,7 @@
   --k-sanat: #b34a6a;   --k-sanat-bg: #f8e1e8;
   --k-gorev: #3f7d3a;   --k-gorev-bg: #e2f0df;
   --k-hata: #b8402f;    --k-hata-bg: #f8e0db;
+  --k-videolar: #6b46c1;   --k-videolar-bg: #efe8fa;
   --shadow: 0 1px 0 rgba(20, 42, 49, .06), 0 6px 18px -10px rgba(20, 42, 49, .25);
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
@@ -33,6 +34,7 @@
     --k-sanat: #e98fab;   --k-sanat-bg: #3a1f29;
     --k-gorev: #8fcd84;   --k-gorev-bg: #1d3320;
     --k-hata: #ef7d6a;    --k-hata-bg: #3b1d18;
+    --k-videolar: #a890f0;  --k-videolar-bg: #2d244a;
     --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 8px 22px -12px rgba(0, 0, 0, .7);
     color-scheme: dark;
   }
@@ -64,6 +66,7 @@
   --k-sanat: #d6337a;   --k-sanat-bg: #fde4ef;   --k-sanat-on: #ffffff;
   --k-gorev: #2e9445;   --k-gorev-bg: #e1f4e5;   --k-gorev-on: #ffffff;
   --k-hata: #d93a2b;    --k-hata-bg: #fde3e0;    --k-hata-on: #ffffff;
+  --k-videolar: #6b46c1;  --k-videolar-bg: #efe8fa; --k-videolar-on: #ffffff;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --k-fikir: #f5cc33;   --k-fikir-bg: #3a3210;   --k-fikir-on: #2b2000;
@@ -72,6 +75,7 @@
   --k-sanat: #f06aa6;   --k-sanat-bg: #3d1828;   --k-sanat-on: #2d0a1a;
   --k-gorev: #5cc876;   --k-gorev-bg: #15321d;   --k-gorev-on: #0a2412;
   --k-hata: #f26b5c;    --k-hata-bg: #3e1a16;    --k-hata-on: #2e0a06;
+  --k-videolar: #a890f0;  --k-videolar-bg: #2d244a; --k-videolar-on: #ffffff;
 } }
 :root[data-theme="dark"] {
   --k-fikir: #f5cc33;   --k-fikir-bg: #3a3210;   --k-fikir-on: #2b2000;
@@ -80,6 +84,7 @@
   --k-sanat: #f06aa6;   --k-sanat-bg: #3d1828;   --k-sanat-on: #2d0a1a;
   --k-gorev: #5cc876;   --k-gorev-bg: #15321d;   --k-gorev-on: #0a2412;
   --k-hata: #f26b5c;    --k-hata-bg: #3e1a16;    --k-hata-on: #2e0a06;
+  --k-videolar: #a890f0;  --k-videolar-bg: #2d244a; --k-videolar-on: #ffffff;
 }
 
 /* single black theme: overrides every token above, whatever the viewer's light/dark setting */
@@ -94,6 +99,7 @@
   --k-sanat: #ff74b1;   --k-sanat-bg: #34121f;   --k-sanat-on: #2a0716;
   --k-gorev: #5fdc80;   --k-gorev-bg: #0f2a17;   --k-gorev-on: #04170a;
   --k-hata: #ff6e5e;    --k-hata-bg: #35130f;    --k-hata-on: #250604;
+  --k-videolar: #c4b5fd;  --k-videolar-bg: #312454; --k-videolar-on: #ffffff;
   --u1: #7cabff; --u2: #ff9d5e; --u3: #cc9eff; --u4: #4fe3b2; --u5: #ff82b3;
   --shadow: 0 1px 0 rgba(0, 0, 0, .5), 0 10px 26px -12px rgba(0, 0, 0, .9);
 }

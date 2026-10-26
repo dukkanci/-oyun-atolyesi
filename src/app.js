@@ -1,9 +1,9 @@
 const KINDS = [
   ["fikir", "Fikir"], ["mekanik", "Mekanik"], ["hikaye", "Hikâye"],
-  ["sanat", "Sanat & Ses"], ["gorev", "Görev"], ["hata", "Hata"]
+  ["sanat", "Sanat & Ses"], ["gorev", "Görev"], ["hata", "Hata"], ["videolar", "Videolar"]
 ];
 const KIND = Object.fromEntries(KINDS);
-const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!" };
+const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!", videolar: "▶" };
 const STATUS = [["acik", "Açık"], ["suruyor", "Sürüyor"], ["bitti", "Bitti"]];
 const STATUS_N = Object.fromEntries(STATUS);
 const LS_KEY = "atolye-key", LS_SEEN = "atolye-seen";
@@ -721,7 +721,7 @@ const STICKERS = {
   kaydet: ["💾", "KAYDETTİN Mİ?"], rage: ["🤬", "RAGE QUIT"], easter: ["🥚", "EASTER EGG"], sabah: ["🌅", "SABAH OLDU"]
 };
 const BIG_EMOJI = /^(?:\p{Extended_Pictographic}|️|‍|\s)+$/u;
-const STK_KINDS = ["fikir", "mekanik", "hikaye", "sanat", "gorev", "hata"];
+const STK_KINDS = ["fikir", "mekanik", "hikaye", "sanat", "gorev", "hata", "videolar"];
 function stickerEl(key, tag, extra) {
   const [e, label] = STICKERS[key], k = STK_KINDS[Object.keys(STICKERS).indexOf(key) % STK_KINDS.length];
   return h(tag || "div", Object.assign({ class: "stk", style: `--sc:var(--k-${k});--sb:var(--k-${k}-bg)` }, extra || {}),
