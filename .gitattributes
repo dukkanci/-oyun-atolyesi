@@ -1,0 +1,2 @@
+# Kaynaklar her bilgisayarda LF ile tutulur; build.js çıktıyı kendisi CRLF yazar.
+* text=auto eol=lf

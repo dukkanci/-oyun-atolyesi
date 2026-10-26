@@ -1,0 +1,2011 @@
+const KINDS = [
+  ["fikir", "Fikir"], ["mekanik", "Mekanik"], ["hikaye", "Hikâye"],
+  ["sanat", "Sanat & Ses"], ["gorev", "Görev"], ["hata", "Hata"]
+];
+const KIND = Object.fromEntries(KINDS);
+const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!" };
+const STATUS = [["acik", "Açık"], ["suruyor", "Sürüyor"], ["bitti", "Bitti"]];
+const STATUS_N = Object.fromEntries(STATUS);
+const LS_KEY = "atolye-key", LS_SEEN = "atolye-seen";
+
+const S = {
+  db: null, user: null, meId: null, canWrite: true,
+  settings: undefined, notes: [], profiles: {},
+  f: { kind: "all", who: "all", status: "all", media: "all", q: "" },
+  newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0
+};
+
+const $ = id => document.getElementById(id);
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "style") el.style.cssText = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+function kindVars(k) { return `--kc:var(--k-${k});--kb:var(--k-${k}-bg);--ko:var(--k-${k}-on)`; }
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
+}
+function ago(ts) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return "az önce";
+  if (s < 3600) return Math.floor(s / 60) + " dk önce";
+  if (s < 86400) return Math.floor(s / 3600) + " sa önce";
+  if (s < 172800) return "dün";
+  return new Date(ts).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+}
+function who(id) {
+  if (id && id === S.meId) return "Sen";
+  return (S.profiles[id] && S.profiles[id].name) || "Arkadaşın";
+}
+function computeColors() {
+  const first = new Map();
+  const touch = (id, at) => { if (id && (!first.has(id) || first.get(id) > at)) first.set(id, at); };
+  for (const n of S.notes) { touch(n.author, n.createdAt); touch(n.updatedBy, n.updatedAt); for (const r of n.replies || []) touch(r.a, r.at); for (const [uid, val] of Object.entries(n.votes || {})) if (val) touch(uid, val.at); for (const w of workers(n)) touch(w.id, w.at); }
+  for (const m of S.chat || []) touch(m.a, m.at);
+  if (S.meId && !first.has(S.meId)) first.set(S.meId, Infinity);
+  const ord = [...first.keys()].sort((a, b) => first.get(a) - first.get(b));
+  const c = S.settings && S.settings.createdBy;
+  if (c) { const i = ord.indexOf(c); if (i !== 0) { if (i > 0) ord.splice(i, 1); ord.unshift(c); } }
+  S.colorOrder = ord;
+}
+function ucol(id) { const i = (S.colorOrder || []).indexOf(id); return `var(--u${(i < 0 ? 4 : i % 5) + 1})`; }
+function nameEl(id) { return h("b", { style: "color:" + ucol(id) }, who(id)); }
+/* hand-drawn animal avatars, each on its own colour */
+const svgUri = s => "data:image/svg+xml," + encodeURIComponent(s);
+const AVATARS = {
+  baykus: { label: "Baykuş", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#33265a'/><path d='M15 17l8 9M49 17l-8 9' stroke='#6b4428' stroke-width='5' stroke-linecap='round'/><ellipse cx='32' cy='39' rx='19' ry='22' fill='#8a5a3b'/><ellipse cx='32' cy='47' rx='11' ry='12' fill='#d8b48a'/><circle cx='24' cy='31' r='8' fill='#fff'/><circle cx='40' cy='31' r='8' fill='#fff'/><circle cx='24' cy='31' r='4.6' fill='#f2b705'/><circle cx='40' cy='31' r='4.6' fill='#f2b705'/><circle cx='24' cy='31' r='2.3' fill='#111'/><circle cx='40' cy='31' r='2.3' fill='#111'/><path d='M29 37l3 5 3-5z' fill='#f29e05'/></svg>") },
+  tilki: { label: "Tilki", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#173a4a'/><path d='M13 12l12 15-8 5z' fill='#e8711c'/><path d='M51 12l-12 15 8 5z' fill='#e8711c'/><path d='M16 16l6 8-3 2z' fill='#3a1a08'/><path d='M48 16l-6 8 3 2z' fill='#3a1a08'/><path d='M12 32Q14 20 32 20Q50 20 52 32L32 55Z' fill='#f07f22'/><path d='M12 32L32 55L25 37Z' fill='#fff3e6'/><path d='M52 32L32 55L39 37Z' fill='#fff3e6'/><circle cx='32' cy='52' r='3' fill='#1a1a1a'/><ellipse cx='25' cy='31' rx='2.2' ry='3' fill='#1a1a1a'/><ellipse cx='39' cy='31' rx='2.2' ry='3' fill='#1a1a1a'/></svg>") },
+  panda: { label: "Panda", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#2b6a4b'/><circle cx='17' cy='18' r='7' fill='#111'/><circle cx='47' cy='18' r='7' fill='#111'/><ellipse cx='32' cy='35' rx='20' ry='19' fill='#f7f7f2'/><ellipse cx='24' cy='33' rx='5' ry='6.5' transform='rotate(-25 24 33)' fill='#111'/><ellipse cx='40' cy='33' rx='5' ry='6.5' transform='rotate(25 40 33)' fill='#111'/><circle cx='24.5' cy='32' r='1.8' fill='#fff'/><circle cx='39.5' cy='32' r='1.8' fill='#fff'/><ellipse cx='32' cy='42' rx='3.5' ry='2.5' fill='#111'/><path d='M28 46q4 3 8 0' stroke='#111' stroke-width='1.6' fill='none'/></svg>") },
+  kurt: { label: "Kurt", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#4a1820'/><path d='M14 9l9 19-11 2z' fill='#6f7a83'/><path d='M50 9l-9 19 11 2z' fill='#6f7a83'/><path d='M12 30Q14 18 32 18Q50 18 52 30L44 48L32 56L20 48Z' fill='#8d98a1'/><path d='M24 40L32 56L40 40Q32 36 24 40Z' fill='#e6e9ec'/><circle cx='32' cy='50' r='2.8' fill='#111'/><ellipse cx='25' cy='31' rx='2.8' ry='1.9' fill='#ffd23f'/><ellipse cx='39' cy='31' rx='2.8' ry='1.9' fill='#ffd23f'/><circle cx='25' cy='31' r='1.1' fill='#111'/><circle cx='39' cy='31' r='1.1' fill='#111'/><path d='M21 27.5l7 2M43 27.5l-7 2' stroke='#2a2f33' stroke-width='2' stroke-linecap='round'/></svg>") },
+  kedi: { label: "Kedi", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#b07a00'/><path d='M14 12l12 12-12 6z' fill='#2b2b2e'/><path d='M50 12l-12 12 12 6z' fill='#2b2b2e'/><ellipse cx='32' cy='36' rx='19' ry='17' fill='#2b2b2e'/><ellipse cx='25' cy='33' rx='3.5' ry='4.2' fill='#7ee081'/><ellipse cx='39' cy='33' rx='3.5' ry='4.2' fill='#7ee081'/><ellipse cx='25' cy='33' rx='1.1' ry='3.4' fill='#111'/><ellipse cx='39' cy='33' rx='1.1' ry='3.4' fill='#111'/><path d='M30 40h4l-2 2.5z' fill='#ff8fb1'/><path d='M13 40l11 1M13 44l11-1M51 40l-11 1M51 44l-11-1' stroke='#dddddd' stroke-width='1'/></svg>") },
+  ayi: { label: "Ayı", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#2d4f8a'/><circle cx='16' cy='18' r='8' fill='#7a4a24'/><circle cx='48' cy='18' r='8' fill='#7a4a24'/><circle cx='16' cy='18' r='4' fill='#c48a5a'/><circle cx='48' cy='18' r='4' fill='#c48a5a'/><circle cx='32' cy='36' r='20' fill='#8b5a2b'/><ellipse cx='32' cy='43' rx='9' ry='7' fill='#d9a874'/><ellipse cx='32' cy='40' rx='3.6' ry='2.6' fill='#2a1a0e'/><circle cx='24' cy='31' r='2.4' fill='#111'/><circle cx='40' cy='31' r='2.4' fill='#111'/><path d='M29 46q3 2 6 0' stroke='#2a1a0e' stroke-width='1.5' fill='none'/></svg>") },
+  tavsan: { label: "Tavşan", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#a3174f'/><ellipse cx='24' cy='16' rx='5' ry='14' fill='#f1eef0'/><ellipse cx='40' cy='16' rx='5' ry='14' fill='#f1eef0'/><ellipse cx='24' cy='17' rx='2.4' ry='10' fill='#ffb3c7'/><ellipse cx='40' cy='17' rx='2.4' ry='10' fill='#ffb3c7'/><circle cx='32' cy='40' r='17' fill='#f1eef0'/><circle cx='26' cy='37' r='2.3' fill='#111'/><circle cx='38' cy='37' r='2.3' fill='#111'/><path d='M30 43h4l-2 2.4z' fill='#ff7aa0'/><path d='M32 45.5v2.5M29 49q3 2 6 0' stroke='#555555' stroke-width='1.2' fill='none'/></svg>") },
+  penguen: { label: "Penguen", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#3b8fc0'/><ellipse cx='32' cy='36' rx='20' ry='24' fill='#1b1f24'/><ellipse cx='32' cy='42' rx='13' ry='17' fill='#f5f5f5'/><circle cx='26' cy='28' r='2.6' fill='#ffffff'/><circle cx='38' cy='28' r='2.6' fill='#ffffff'/><circle cx='26' cy='28' r='1.4' fill='#111'/><circle cx='38' cy='28' r='1.4' fill='#111'/><path d='M28 32l4 5 4-5z' fill='#f5a623'/></svg>") },
+  kurbaga: { label: "Kurbağa", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#14213d'/><circle cx='21' cy='22' r='8' fill='#4caf50'/><circle cx='43' cy='22' r='8' fill='#4caf50'/><ellipse cx='32' cy='40' rx='21' ry='16' fill='#4caf50'/><circle cx='21' cy='22' r='4.5' fill='#ffffff'/><circle cx='43' cy='22' r='4.5' fill='#ffffff'/><circle cx='21' cy='22' r='2.3' fill='#111'/><circle cx='43' cy='22' r='2.3' fill='#111'/><path d='M20 42q12 9 24 0' stroke='#1b5e20' stroke-width='2.2' fill='none' stroke-linecap='round'/><circle cx='27' cy='35' r='1' fill='#1b5e20'/><circle cx='37' cy='35' r='1' fill='#1b5e20'/></svg>") },
+  aslan: { label: "Aslan", src: svgUri("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='#3a3f47'/><circle cx='32' cy='34' r='24' fill='#b5651d'/><circle cx='32' cy='35' r='16' fill='#f2c46d'/><circle cx='26' cy='32' r='2.2' fill='#111'/><circle cx='38' cy='32' r='2.2' fill='#111'/><path d='M29 38h6l-3 3z' fill='#5a3210'/><path d='M32 41v3M28 46q4 2 8 0' stroke='#5a3210' stroke-width='1.4' fill='none'/></svg>") }
+};
+const AV_ALIAS = { profesor: "baykus", berlin: "tilki" };
+/* "rotate": a new animal every 2.5 h. Same on every screen; consecutive slots always differ, and so do two people */
+const ROT_MS = 2.5 * 3600 * 1000;
+const rotSlot = () => Math.floor(Date.now() / ROT_MS);
+function rotPick(id) {
+  const keys = Object.keys(AVATARS), n = keys.length;
+  let i = (S.colorOrder || []).indexOf(id);
+  if (i < 0) i = [...id].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return AVATARS[keys[(rotSlot() * 3 + i * 5 + Math.floor(i / 2)) % n]];
+}
+let lastSlot = rotSlot();
+setInterval(() => { if (rotSlot() !== lastSlot) { lastSlot = rotSlot(); if (S.settings) render(); } }, 60000);
+function avatar(id, cls) {
+  const p = S.profiles[id], style = "box-shadow:0 0 0 2px " + ucol(id);
+  const raw = S.settings && S.settings.avatars && S.settings.avatars[id];
+  const pick = raw === "rotate" ? rotPick(id) : raw && AVATARS[AV_ALIAS[raw] || raw];
+  const custom = typeof raw === "string" && raw.startsWith("img:") ? imgUrl(raw.slice(4)) : null;
+  const src = custom || (pick ? pick.src : p && p.avatarUrl);
+  return src ? h("img", { class: "av " + (cls || ""), src, alt: "", style, title: pick ? pick.label : null }) : h("span", { class: "av " + (cls || ""), style });
+}
+function renderAvList() {
+  const box = $("av-list"); if (!box) return;
+  const rawCur = (S.settings && S.settings.avatars && S.settings.avatars[S.meId]) || null;
+  const cur = AV_ALIAS[rawCur] || rawCur;
+  box.replaceChildren();
+  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "claude.ai fotoğrafım", src: null }]])) {
+    box.append(h("button", { type: "button", class: "chip avpick", "aria-pressed": String(cur === k),
+      onclick: async () => { if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: k } }))) toast("Profil fotoğrafın güncellendi"); } },
+      a.src ? h("img", { src: a.src, alt: "" }) : null, a.label));
+  }
+  if (S.assets && S.meId) {
+    const inp = h("input", { type: "file", id: "av-file", accept: IMG_TYPES.join(","), hidden: true });
+    inp.addEventListener("change", async () => {
+      const f = inp.files[0]; inp.value = "";
+      if (!f) return;
+      const got = await uploadMedia([f], { set textContent(v) { if (v) toast(v); } });
+      if (got.images[0] && await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: "img:" + got.images[0] } })))
+        toast("Profil fotoğrafın güncellendi");
+    });
+    const mine = typeof rawCur === "string" && rawCur.startsWith("img:");
+    box.append(h("label", { class: "chip avpick", for: "av-file", "aria-pressed": String(mine), style: "cursor:pointer" },
+      mine ? h("img", { src: imgUrl(rawCur.slice(4)), alt: "" }) : null, mine ? "Kendi fotoğrafın · değiştir" : "Kendi fotoğrafını yükle"), inp);
+  }
+}
+async function hash(pass) {
+  const s = "atolye|" + pass;
+  try {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+  } catch (e) {
+    let a = 5381; for (const c of s) a = ((a * 33) ^ c.charCodeAt(0)) >>> 0;
+    return "f" + a.toString(16);
+  }
+}
+function showNoWrite() {
+  S.canWrite = false;
+  const b = $("nowrite"); if (b) b.hidden = false;
+}
+function show(id) {
+  for (const s of ["s-loading", "s-noaccess", "s-setup", "s-wait", "s-lock", "s-app"]) $(s).hidden = s !== id;
+}
+async function write(fn, errEl) {
+  try { await fn(); if (errEl) errEl.textContent = ""; return true; }
+  catch (e) {
+    const code = (e && e.code) || "bilinmiyor";
+    const msg = code === "invalid_argument"
+      ? "Bu atölyeye yazma iznin yok. Sayfanın sahibi Paylaş menüsünden seni Düzenleyici olarak eklemeli ve herkese açık linki kapatmalı."
+      : code === "quota_exceeded" ? "Depolama dolu. Eski notları silip tekrar dene."
+      : "Kaydedilemedi (" + code + "). Bağlantını kontrol edip tekrar dene.";
+    if (code === "invalid_argument") showNoWrite();
+    if (errEl) errEl.textContent = msg; else toast(msg);
+    return false;
+  }
+}
+
+/* ---------- boot & routing ---------- */
+async function boot() {
+  const use = window.claude && window.claude.use;
+  const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
+  if (!db) { show("s-noaccess"); return; }
+  S.db = db; S.user = user; S.assets = assets;
+  startPresence();
+  if (!assets) {
+    $("nw-filebtn").hidden = true;
+    $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
+  }
+  if (user) {
+    const me = await user.me();
+    S.meId = me.id;
+    S.canWrite = (await user.can("data.write")) !== false;
+    if (!S.canWrite) showNoWrite();
+  }
+  S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
+  const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
+  window.addEventListener("pagehide", markSeen);
+
+  db.doc("team/settings").onSnapshot(snap => {
+    S.settings = snap.exists ? snap.data() : null;
+    route();
+  }, () => show("s-noaccess"));
+}
+
+function route() {
+  const st = S.settings;
+  if (st === undefined) return show("s-loading");
+  if (!st || !st.passHash) return show(S.canWrite ? "s-setup" : "s-wait");
+  $("lock-game").textContent = st.game || "Oyun Atölyesi";
+  if (ls.get(LS_KEY) !== st.passHash) {
+    show("s-lock");
+    if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
+    if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
+    if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
+    return;
+  }
+  show("s-app");
+  $("game-name").textContent = st.game || "Oyun Atölyesi";
+  if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
+  if (!S.notesUnsub) {
+    S.liveSince = Date.now();
+    S.notesUnsub = S.db.collection("notes").orderBy("updatedAt", "desc").limit(500).onSnapshot(snap => {
+      const prev = S.notes;
+      S.notes = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      const news = detectNews(prev, S.notes);
+      render().then(() => { if (news.length) { playSound(topSound(news)); news.slice(0, 3).forEach(notify); } });
+    }, () => toast("Notlar yüklenemedi. Sayfayı yenile."));
+  }
+  startJobs();
+  startUpdates();
+  if (!S.lsUnsub) S.lsUnsub = S.db.collection("lastseen").onSnapshot(s => {
+    S.lastSeenOnline = Object.fromEntries(s.docs.map(d => [d.id, d.data().at]));
+    renderPeople(S.lastIds || new Set());
+  }, () => {});
+  if (!S.seenUnsub) S.seenUnsub = S.db.collection("chatseen").onSnapshot(s => {
+    S.seenBy = Object.fromEntries(s.docs.map(d => [d.id, d.data()]));
+    renderChat(false);
+  }, () => {});
+  if (!S.stkUnsub) S.stkUnsub = S.db.collection("stickers").orderBy("at", "asc").limit(100).onSnapshot(s => {
+    S.stickers = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(x => x.img);
+    if (!$("emoji-pop").hidden && S.epTab === "Sticker") renderEmojiPop();
+  }, () => {});
+  if (!S.chatUnsub) S.chatUnsub = S.db.collection("chat").orderBy("at", "desc").limit(300).onSnapshot(onChat, () => toast("Sohbet yüklenemedi. Sayfayı yenile."));
+  render();
+}
+
+$("f-setup").addEventListener("submit", async e => {
+  e.preventDefault();
+  const p1 = $("su-pass").value, p2 = $("su-pass2").value, err = $("su-err");
+  if (p1 !== p2) { err.textContent = "Şifreler aynı değil."; return; }
+  const ph = await hash(p1);
+  ls.set(LS_KEY, ph);
+  await write(() => S.db.doc("team/settings").set({
+    game: $("su-game").value.trim(), passHash: ph, createdBy: S.meId, createdAt: Date.now()
+  }), err);
+});
+
+$("f-lock").addEventListener("submit", async e => {
+  e.preventDefault();
+  const ph = await hash($("lk-pass").value);
+  if (S.settings && ph === S.settings.passHash) {
+    ls.set(LS_KEY, ph); $("lk-pass").value = ""; $("lk-err").textContent = ""; route();
+  } else {
+    $("lk-err").textContent = "Şifre yanlış. Arkadaşına doğru şifreyi sor.";
+  }
+});
+
+/* ---------- notifications & sound ---------- */
+let audioCtx = null;
+S.sound = ls.get("atolye-sound") !== "off";
+function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (e) {}
+}
+for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, unlockAudio, { capture: true });
+function chime() {
+  if (!S.sound || !audioCtx || audioCtx.state !== "running") return;
+  const t0 = audioCtx.currentTime;
+  [[880, 0], [1318.5, 0.12]].forEach(([f, d]) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0 + d);
+    g.gain.exponentialRampToValueAtTime(0.25, t0 + d + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.45);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0 + d); o.stop(t0 + d + 0.5);
+  });
+}
+const SOUNDS = {
+  new:   { label: "Yeni not",      wave: "sine",     notes: [[880, 0, .35], [1318.5, .12, .4]] },
+  reply: { label: "Yanıt",         wave: "triangle", notes: [[784, 0, .12], [988, .1, .2]] },
+  edit:  { label: "Düzenleme",     wave: "sine",     notes: [[523, 0, .3]], vol: .18 },
+  done:  { label: "Not bitti",     wave: "triangle", notes: [[523, 0, .18], [659, .1, .18], [784, .2, .18], [1046.5, .3, .55]] },
+  yes:   { label: "Onay",          wave: "sine",     notes: [[659, 0, .16], [880, .13, .38]] },
+  no:    { label: "Ret",           wave: "sawtooth", notes: [[392, 0, .2], [294, .17, .42]], vol: .09 },
+  work:  { label: "İlgileniyor",   wave: "triangle", notes: [[330, 0, .08], [330, .14, .08], [494, .28, .16]] },
+  chat:  { label: "Sohbet mesajı", wave: "sine",     notes: [[600, 0, .14, 1200]] },
+  ai:    { label: "Claude cevabı", wave: "sine",     notes: [[1046.5, 0, .14], [1318.5, .08, .14], [1568, .16, .14], [2093, .24, .35]], vol: .14 },
+  ping:  { label: "Dürtme",        fn: force => pingSound(force) }
+};
+function playSound(k, force) {
+  if ((!S.sound && !force) || !audioCtx || audioCtx.state !== "running") return;
+  const s = SOUNDS[k] || SOUNDS.new;
+  if (s.fn) return s.fn(force);
+  const t0 = audioCtx.currentTime, vol = s.vol || .25;
+  for (const [f, d, dur, f2] of s.notes) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = s.wave;
+    o.frequency.setValueAtTime(f, t0 + d);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d + dur);
+    g.gain.setValueAtTime(0.0001, t0 + d);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + d + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + dur);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0 + d); o.stop(t0 + d + dur + 0.05);
+  }
+}
+const PRIO = ["done", "yes", "no", "new", "reply", "work", "edit"];
+const topSound = items => PRIO.find(p => items.some(i => i.snd === p)) || "new";
+for (const [k, s] of Object.entries(SOUNDS)) $("snd-list").append(h("button", { type: "button", class: "chip",
+  onclick: () => { unlockAudio(); setTimeout(() => playSound(k, true), 30); } }, "▶ " + s.label));
+
+function renderSoundBtn() {
+  const b = $("btn-sound");
+  b.textContent = S.sound ? "Ses açık" : "Ses kapalı";
+  b.setAttribute("aria-pressed", String(S.sound));
+}
+$("btn-sound").addEventListener("click", () => {
+  S.sound = !S.sound; ls.set("atolye-sound", S.sound ? "on" : "off");
+  renderSoundBtn(); unlockAudio(); setTimeout(chime, 30);
+});
+renderSoundBtn();
+
+function detectNews(prev, next) {
+  if (!S.meId) return [];
+  const old = new Map(prev.map(n => [n.id, n]));
+  const out = [];
+  for (const n of next) {
+    const o = old.get(n.id);
+    if (!o) {
+      if (n.author !== S.meId && n.createdAt > S.liveSince) out.push({ by: n.author, snd: "new", text: "yeni not ekledi", id: n.id, title: n.title, kind: n.kind });
+      continue;
+    }
+    for (const [uid, val] of Object.entries(n.working || {})) {
+      const ow = (o.working || {})[uid];
+      if (uid !== S.meId && val && val.at > S.liveSince && (!ow || ow.at !== val.at))
+        out.push({ by: uid, snd: "work", text: "bu konuyla ilgilenmeye başladı ⚒", id: n.id, title: n.title, kind: n.kind });
+    }
+    for (const [k, m] of Object.entries(n.rvotes || {})) for (const [uid, val] of Object.entries(m || {})) {
+      const orv = ((o.rvotes || {})[k] || {})[uid];
+      if (uid !== S.meId && val && val.at > S.liveSince && (!orv || orv.at !== val.at))
+        out.push({ by: uid, snd: val.v, text: val.v === "yes" ? "bir yorumu onayladı ✓" : "bir yorumu reddetti ✕", id: n.id, title: n.title, kind: n.kind });
+    }
+    for (const [uid, val] of Object.entries(n.votes || {})) {
+      const ov = (o.votes || {})[uid];
+      if (uid !== S.meId && val && val.at > S.liveSince && (!ov || ov.at !== val.at))
+        out.push({ by: uid, snd: val.v, text: val.v === "yes" ? "fikre onay verdi ✓" : "fikri reddetti ✕", id: n.id, title: n.title, kind: n.kind });
+    }
+    if (n.updatedAt === o.updatedAt) continue;
+    const fresh = (n.replies || []).slice((o.replies || []).length).filter(r => r.a !== S.meId && r.at > S.liveSince);
+    if (fresh.length) out.push({ by: fresh[fresh.length - 1].a, snd: "reply", text: "yanıt yazdı", id: n.id, title: n.title, kind: n.kind, quote: fresh[fresh.length - 1].t });
+    else if (n.updatedBy !== S.meId && n.updatedAt > S.liveSince) out.push({ by: n.updatedBy, snd: n.status === "bitti" && o.status !== "bitti" ? "done" : "edit", text: n.status === "bitti" && o.status !== "bitti" ? "notu bitirdi ✓" : "notu güncelledi", id: n.id, title: n.title, kind: n.kind });
+  }
+  return out;
+}
+function notify(item) {
+  const el = h("button", { type: "button", class: "notif", style: kindVars(item.kind) + ";--uc:" + ucol(item.by),
+    onclick: () => { el.remove(); if (item.chat) setView("chat"); else if (item.ai) setView("ai"); else if (item.upd) setView("upd"); else openSheet(item.id); } },
+    avatar(item.by),
+    h("div", {}, h("div", {}, nameEl(item.by), " " + item.text),
+      h("div", { class: "nt" }, item.title),
+      item.quote && h("div", { class: "nq" }, item.quote)));
+  $("notifs").prepend(el);
+  setTimeout(() => el.remove(), 8000);
+}
+
+/* ---------- ping ("dürt") ---------- */
+S.pingSubs = {}; S.pingOut = {}; S.pingIn = null;
+let lastPingAt = 0;
+function pingSound() {
+  if ((!S.sound && !arguments[0]) || !audioCtx || audioCtx.state !== "running") return;
+  const t0 = audioCtx.currentTime;
+  [[660, 0], [660, .18], [990, .36], [660, .85], [660, 1.03], [990, 1.21]].forEach(([f, d]) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0 + d);
+    g.gain.exponentialRampToValueAtTime(0.16, t0 + d + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.15);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0 + d); o.stop(t0 + d + 0.17);
+  });
+}
+async function sendPing(to, noteId) {
+  const last = S.pingOut[to];
+  if (last && last.from === S.meId && Date.now() - last.at < 10000) { toast("Az önce dürttün, biraz bekle"); return; }
+  const n = noteId ? S.notes.find(x => x.id === noteId) : null;
+  if (await write(() => S.db.doc("pings/" + to).set({ from: S.meId, at: Date.now(), note: noteId || null, title: n ? n.title : null, seenAt: null })))
+    toast(who(to) + " dürtüldü");
+}
+async function ackPing() {
+  $("pingbar").hidden = true;
+  await write(() => S.db.doc("pings/" + S.meId).update({ seenAt: Date.now() }));
+}
+function renderPingIn() {
+  const p = S.pingIn, box = $("pingbar");
+  const active = !!(p && p.from && p.from !== S.meId && !(p.seenAt && p.seenAt >= p.at));
+  box.hidden = !active;
+  if (!active) return;
+  if (p.at > lastPingAt) { if (p.at > S.liveSince) pingSound(); lastPingAt = p.at; }
+  box.replaceChildren(avatar(p.from),
+    h("div", { class: "pt" }, h("div", {}, nameEl(p.from), " seni dürttü, cevap bekliyor"),
+      h("div", { class: "ps" }, (p.title ? "“" + p.title + "” · " : "") + ago(p.at))),
+    p.note && h("button", { class: "btn", type: "button", onclick: () => { ackPing(); openSheet(p.note); } }, "Notu aç"),
+    h("button", { class: "btn primary", type: "button", onclick: ackPing }, "Gördüm"));
+}
+function watchPings() {
+  if (!S.db || !S.meId) return;
+  if (!S.pingSubs[S.meId]) S.pingSubs[S.meId] = S.db.doc("pings/" + S.meId).onSnapshot(s => {
+    S.pingIn = s.exists ? s.data() : null; renderPingIn();
+  }, () => {});
+  for (const id of S.colorOrder || []) if (id !== S.meId && !S.pingSubs[id])
+    S.pingSubs[id] = S.db.doc("pings/" + id).onSnapshot(s => {
+      const prev = S.pingOut[id], cur = s.exists ? s.data() : null;
+      S.pingOut[id] = cur;
+      if (prev && cur && cur.from === S.meId && !prev.seenAt && cur.seenAt && cur.at === prev.at) toast(who(id) + " dürtmeni gördü ✓");
+      renderPeople(S.lastIds || new Set());
+    }, () => {});
+}
+
+/* ---------- chat ---------- */
+S.chat = []; S.chatIds = null; S.chatSeen = Number(ls.get("atolye-chatseen")) || 0;
+function markChatSeen() { pushSeen(); if (S.unreadFrom == null) { S.unreadFrom = S.chatSeen; S.unreadUntil = Date.now(); } S.chatSeen = Date.now(); ls.set("atolye-chatseen", String(S.chatSeen)); renderChatBadge(); }
+function renderChatBadge() {
+  const unread = S.chat.filter(m => m.a !== S.meId && m.at > S.chatSeen).length, b = $("n-chat");
+  b.hidden = !unread; b.textContent = unread;
+  renderTotals();
+}
+/* ---------- notification counter (top bar): unread chat + new/changed notes ---------- */
+S.seenNotes = (() => { try { return JSON.parse(ls.get("atolye-seen-notes") || "{}") || {}; } catch (e) { return {}; } })();
+function markNoteSeen(id) { S.seenNotes[id] = Date.now(); ls.set("atolye-seen-notes", JSON.stringify(S.seenNotes)); }
+function counts() {
+  const notes = S.notes.filter(isFresh).length;
+  const chat = S.chat.filter(m => m.a !== S.meId && m.at > S.chatSeen).length;
+  return { notes, chat, total: notes + chat };
+}
+function renderTotals() {
+  const c = counts(), b = $("bell");
+  b.classList.toggle("has", c.total > 0);
+  $("bell-n").textContent = c.total;
+  $("bell-parts").textContent = "Sohbet " + c.chat + " · Not " + c.notes;
+  b.title = "Okunmamış sohbet: " + c.chat + " · Yeni/değişen not: " + c.notes + " · Toplam: " + c.total;
+  if (!$("pop-bell").hidden) fillBell();
+}
+function closeBell() { $("pop-bell").hidden = true; $("bell").setAttribute("aria-expanded", "false"); }
+function fillBell() {
+  const c = counts();
+  $("pop-bell").replaceChildren(
+    h("span", { class: "label" }, "Bildirimler"),
+    h("div", { class: "brow" }, h("span", {}, "Okunmamış sohbet: ", h("b", {}, c.chat)),
+      h("button", { class: "btn sm", type: "button", onclick: () => { closeBell(); setView("chat"); } }, "Sohbeti aç")),
+    h("div", { class: "brow" }, h("span", {}, "Yeni / değişen not: ", h("b", {}, c.notes)),
+      h("button", { class: "btn sm", type: "button", onclick: () => { closeBell(); S.f.fresh = true; setView("active"); } }, "Göster")),
+    h("div", { class: "brow" }, h("span", {}, "Toplam: ", h("b", {}, c.total))),
+    h("button", { class: "btn", type: "button", disabled: !c.total, onclick: markAllSeen }, "Hepsini okundu say"));
+}
+function markAllSeen() {
+  S.prevSeen = Date.now(); ls.set(LS_SEEN, String(S.prevSeen));
+  S.seenNotes = {}; ls.set("atolye-seen-notes", "{}");
+  S.f.fresh = false;
+  markChatSeen(); render();
+}
+$("bell").addEventListener("click", () => {
+  const pop = $("pop-bell"); pop.hidden = !pop.hidden;
+  $("bell").setAttribute("aria-expanded", String(!pop.hidden));
+  if (!pop.hidden) fillBell();
+});
+document.addEventListener("click", e => { if (!e.target.closest("#bellwrap")) closeBell(); });
+$("fresh-clear").addEventListener("click", () => { S.f.fresh = false; renderCards(); });
+function onChat(snap) {
+  const prev = S.chatIds;
+  S.chat = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(m => typeof m.at === "number").reverse();
+  if (prev) {
+    const fresh = S.chat.filter(m => !prev.has(m.id) && m.a !== S.meId && m.at > S.liveSince);
+    const viewing = S.view === "chat" && !document.hidden;
+    if (fresh.length) {
+      playSound("chat");
+      if (!viewing) {
+        const last = fresh[fresh.length - 1];
+        render().then(() => notify({ chat: true, by: last.a, text: last.poll ? "oylama başlattı 📊" : last.sticker || last.cst ? "sticker gönderdi" : last.voice ? "sesli mesaj gönderdi 🎤" : (last.files || []).length ? "dosya gönderdi" : (last.imgs || []).length ? "fotoğraf gönderdi" : "mesaj gönderdi",
+          title: (last.t || (last.poll && last.poll.q) || (last.sticker && STICKERS[last.sticker] ? STICKERS[last.sticker].join(" ") : "") || ((last.files || [])[0] || {}).name || "Fotoğraf").slice(0, 140) }));
+      }
+    }
+  }
+  S.chatIds = new Set(S.chat.map(m => m.id));
+  if (S.view === "chat" && !document.hidden) markChatSeen();
+  render();
+}
+function renderChat(forceBottom) {
+  const log = $("chat-log");
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  log.replaceChildren();
+  if (!S.chat.length) log.append(h("div", { class: "empty" }, h("strong", {}, "Sohbet boş"),
+    "Fikirlerden bağımsız konuşmak için buraya yaz. Mesajlar kaydedilir, ikiniz de görürsünüz."));
+  let lastDay = "", lastBy = null, lastAt = 0, lineDone = false;
+  const lastMine = [...S.chat].reverse().find(x => x.a === S.meId);
+  for (const m of S.chat) {
+    if (!lineDone && S.view === "chat" && S.unreadFrom != null && m.a !== S.meId && m.at > S.unreadFrom && m.at <= S.unreadUntil) {
+      const cnt = S.chat.filter(x => x.a !== S.meId && x.at > S.unreadFrom && x.at <= S.unreadUntil).length;
+      log.append(h("div", { class: "unread-line" }, cnt + " okunmamış mesaj")); lineDone = true; lastBy = null;
+    }
+    const d = new Date(m.at);
+    const day = d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
+    if (day !== lastDay) { log.append(h("div", { class: "day" }, day)); lastDay = day; lastBy = null; }
+    const mine = m.a === S.meId, grouped = lastBy === m.a && m.at - lastAt < 5 * 60 * 1000;
+    let del = null;
+    if (mine) {
+      del = h("button", { class: "mdel", type: "button" }, "sil");
+      del.addEventListener("click", async () => {
+        if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "emin misin? tekrar tıkla"; return; }
+        await write(() => S.db.doc("chat/" + m.id).delete());
+      });
+    }
+    log.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
+      grouped ? h("span", { class: "ph" }) : avatar(m.a, "sm"),
+      h("div", { class: "mb" },
+        !grouped && h("div", { class: "mh" }, nameEl(m.a), " ", h("span", { class: "mt" }, d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }))),
+        m.re && m.re.id ? h("button", { type: "button", class: "mquote", style: "--qc:" + ucol(m.re.a), title: "Yanıtlanan mesaja git", onclick: () => jumpTo(m.re.id) },
+          h("b", {}, who(m.re.a)), " ", m.re.t || "…") : null,
+        (m.imgs || []).length ? h("div", { class: "mimgs" }, m.imgs.map(id => h("img", { src: imgUrl(id), alt: "", loading: "lazy",
+          onclick: () => lightbox(id),
+          onload: () => { const l = $("chat-log"); if (l.scrollHeight - l.scrollTop - l.clientHeight < 400) l.scrollTop = l.scrollHeight; } }))) : null,
+        (m.files || []).length ? h("div", { class: "mfiles" }, m.files.map(fl => fl.type && fl.type.startsWith("video/")
+          ? h("video", { src: imgUrl(fl.id), controls: true, preload: "metadata", playsinline: true })
+          : h("a", { class: "mfile", href: imgUrl(fl.id), target: "_blank", rel: "noopener", title: "Yeni sekmede aç" },
+              h("span", { class: "fx" }, String(fl.name || "").split(".").pop().slice(0, 4) || "dosya"),
+              h("span", { class: "fn" }, fl.name || "dosya"), h("span", { class: "fs" }, fmtSize(fl.size || 0))))) : null,
+        m.voice && m.voice.id ? h("div", { class: "mvoice" }, h("audio", { src: imgUrl(m.voice.id), controls: true, preload: "metadata" }),
+          h("span", { class: "fs" }, "🎤 " + fmtDur(m.voice.dur || 0))) : null,
+        m.poll ? pollEl(m) : null,
+        m.sticker && STICKERS[m.sticker] ? stickerEl(m.sticker) : null,
+        m.cst && m.cst.img ? customStickerEl({ a: m.cst.by || m.a, img: m.cst.img, label: m.cst.label }) : null,
+        S.editing === m.id ? editBox(m)
+          : m.t ? h("div", { class: "mx" + (BIG_EMOJI.test(m.t) && m.t.length <= 12 ? " big" : "") }, linkify(m.t), m.editedAt ? h("span", { class: "edited" }, " (düzenlendi)") : null) : null,
+        h("div", { class: "macts" }, mine ? seenTick(m, lastMine && lastMine.id === m.id) : null,
+          h("button", { class: "mdel", type: "button", onclick: () => setReply(m) }, "↩ yanıtla"),
+          mine && m.t && S.editing !== m.id ? h("button", { class: "mdel", type: "button", onclick: () => startEdit(m) }, "✎ düzenle") : null, del))));
+    lastBy = m.a; lastAt = m.at;
+  }
+  if (forceBottom || nearBottom) log.scrollTop = log.scrollHeight;
+  const ta = S.editing && $("edit-in");
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+S.chatImgs = []; S.chatFiles = []; S.chatUploading = 0;
+/* file types the platform's asset store accepts (besides images); 20 MB per file is a platform limit */
+const FILE_TYPES = { pdf: "application/pdf", mp4: "video/mp4", webm: "video/webm", txt: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json" };
+function fileType(f) {
+  const ext = (String(f.name || "").split(".").pop() || "").toLowerCase();
+  return FILE_TYPES[ext] || (Object.values(FILE_TYPES).includes(f.type) ? f.type : null);
+}
+const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+function renderChatAtt() {
+  const box = $("chat-att");
+  box.hidden = !S.chatImgs.length && !S.chatFiles.length && !S.chatUploading;
+  box.replaceChildren();
+  for (const fl of S.chatFiles) box.append(h("div", { class: "attf" }, h("span", {}, fl.name), h("span", { class: "fs" }, fmtSize(fl.size)),
+    h("button", { type: "button", "aria-label": "Dosyayı çıkar", onclick: () => {
+      S.chatFiles = S.chatFiles.filter(x => x !== fl); renderChatAtt();
+      if (S.assets) S.assets.delete(fl.id).catch(() => {});
+    } }, "×")));
+  for (const id of S.chatImgs) box.append(h("div", { class: "thumb" }, h("img", { src: imgUrl(id), alt: "" }),
+    h("button", { type: "button", "aria-label": "Fotoğrafı çıkar", onclick: () => {
+      S.chatImgs = S.chatImgs.filter(x => x !== id); renderChatAtt();
+      if (S.assets) S.assets.delete(id).catch(() => {});
+    } }, "×")));
+  for (let i = 0; i < S.chatUploading; i++) box.append(h("div", { class: "thumb loading" }, "yükleniyor"));
+}
+async function addChatImages(files) {
+  files = [...files];
+  if (!files.length) return;
+  if (!S.assets) { toast("Dosya eklemek için sayfanın sahibi seni Düzenleyici yapmalı."); return; }
+  const imgs = files.filter(f => IMG_TYPES.includes(f.type)), others = files.filter(f => !IMG_TYPES.includes(f.type));
+  S.chatUploading += files.length; renderChatAtt();
+  if (imgs.length) {
+    const got = await uploadMedia(imgs, { set textContent(v) { if (v) toast(v); } });
+    S.chatImgs.push(...got.images);
+  }
+  for (const f of others) {
+    const type = fileType(f);
+    if (!type) toast((f.name || "Dosya") + ": bu tür yüklenemiyor. Görsel, PDF, MP4/WEBM, TXT, MD, CSV ve JSON destekleniyor.");
+    else if (f.size > 20 * 1024 * 1024) toast((f.name || "Dosya") + " 20 MB'tan büyük. claude.ai dosya başına en fazla 20 MB kabul ediyor.");
+    else {
+      try { const r = await S.assets.upload(f, { type }); S.chatFiles.push({ id: r.id, name: String(f.name || "dosya").slice(0, 120), type, size: f.size }); }
+      catch (e) { toast(assetErr(e)); }
+    }
+  }
+  S.chatUploading -= files.length; renderChatAtt();
+  $("chat-in").focus();
+}
+async function sendChat() {
+  const inp = $("chat-in"), t = inp.value.trim(), imgs = S.chatImgs.slice(), files = S.chatFiles.slice();
+  if ((!t && !imgs.length && !files.length) || !S.meId) return;
+  if (S.chatUploading) { toast("Dosya yükleniyor, bir saniye…"); return; }
+  inp.value = ""; S.chatImgs = []; S.chatFiles = []; renderChatAtt();
+  const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
+  const ok = await write(() => S.db.collection("chat").add({ a: S.meId, t: t.slice(0, 4000), at: Date.now(), imgs, files, re }));
+  if (!ok) { inp.value = t; S.chatImgs = imgs; S.chatFiles = files; renderChatAtt(); S.replyTo = re; renderReplyBar(); } else setTimeout(() => renderChat(true), 0);
+}
+/* voice messages: record with the microphone, upload the clip as an asset (webm/mp4 container), store {voice:{id,type,dur}} in chat */
+const fmtDur = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
+S.rec = null;
+async function toggleVoice() {
+  const btn = $("voice-btn");
+  if (S.rec) { S.rec.mr.stop(); return; }
+  if (!S.assets) { toast("Sesli mesaj göndermek için sayfanın sahibi seni Düzenleyici yapmalı."); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { toast("Bu tarayıcı ses kaydını desteklemiyor."); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  // Artifact çerçevesi mikrofona izin vermiyor (İzinler menüsünde de çıkmaz); sesli sohbet ayrı sayfada çalışır.
+  catch (e) { toast("Claude sayfası mikrofona izin vermiyor. Sesli sohbet için 📞 düğmesini kullan; yeni sekmede açılır."); return; }
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
+  const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], start = Date.now();
+  const tick = setInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
+  S.rec = { mr };
+  btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); btn.textContent = "■ 0:00"; btn.title = "Kaydı bitir ve gönder";
+  mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = async () => {
+    clearInterval(tick); stream.getTracks().forEach(t => t.stop()); S.rec = null;
+    btn.classList.remove("rec"); btn.setAttribute("aria-pressed", "false"); btn.textContent = "🎤"; btn.title = "Sesli mesaj kaydet: bir kez tıkla başlasın, tekrar tıkla gönderilsin";
+    const dur = (Date.now() - start) / 1000;
+    if (dur < 0.7 || !chunks.length) { toast("Kayıt çok kısa, gönderilmedi."); return; }
+    const type = (mr.mimeType || mime).includes("mp4") ? "video/mp4" : "video/webm";
+    const blob = new Blob(chunks, { type });
+    if (blob.size > 20 * 1024 * 1024) { toast("Sesli mesaj 20 MB'tan büyük, gönderilemedi."); return; }
+    toast("Sesli mesaj gönderiliyor…");
+    let r;
+    try { r = await S.assets.upload(blob, { type }); } catch (e) { toast(assetErr(e)); return; }
+    const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
+    if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), voice: { id: r.id, type, dur: Math.round(dur) }, re })))
+      setTimeout(() => renderChat(true), 0);
+  };
+  mr.start(1000);
+  if (S.recMax) clearTimeout(S.recMax);
+  S.recMax = setTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
+}
+$("voice-btn").addEventListener("click", toggleVoice);
+/* read receipts: each person keeps chatseen/<id> = time they last looked at the chat */
+S.seenBy = {};
+let seenTimer = null;
+function pushSeen() {
+  clearTimeout(seenTimer);
+  seenTimer = setTimeout(() => { if (S.db && S.meId) S.db.doc("chatseen/" + S.meId).set({ at: Date.now() }).catch(() => {}); }, 800);
+}
+function seenTick(m, isLast) {
+  const seenIds = Object.entries(S.seenBy || {}).filter(([id, v]) => id !== S.meId && v && v.at >= m.at).map(([id]) => id);
+  const t = new Date(m.at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const label = seenIds.length
+    ? "✓✓" + (isLast ? " " + seenIds.map(who).join(", ") + " gördü" : "")
+    : "✓" + (isLast ? " İletildi, henüz görülmedi" : "");
+  return h("span", { class: "tick" + (seenIds.length ? " seen" : ""),
+    title: seenIds.length ? "Gördü: " + seenIds.map(who).join(", ") : "Gönderildi (" + t + "), henüz görülmedi" }, label);
+}
+/* edit your own text messages in place */
+S.editing = null; S.editDraft = "";
+function startEdit(m) { S.editing = m.id; S.editDraft = m.t || ""; renderChat(false); }
+function cancelEdit() { S.editing = null; renderChat(false); }
+function editBox(m) {
+  const ta = h("textarea", { class: "field", id: "edit-in", rows: "2", "aria-label": "Mesajı düzenle" });
+  ta.value = S.editDraft;
+  ta.addEventListener("input", () => { S.editDraft = ta.value; });
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); saveEdit(m); }
+    else if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
+  });
+  return h("div", { class: "editbox" }, ta, h("div", { class: "macts" },
+    h("button", { class: "btn sm primary", type: "button", onclick: () => saveEdit(m) }, "Kaydet"),
+    h("button", { class: "btn sm ghost", type: "button", onclick: cancelEdit }, "İptal")));
+}
+async function saveEdit(m) {
+  const t = S.editDraft.trim();
+  if (!t) { toast("Mesaj boş olamaz. Silmek için “sil”i kullan."); return; }
+  if (t === m.t) { cancelEdit(); return; }
+  if (await write(() => S.db.doc("chat/" + m.id).update({ t: t.slice(0, 4000), editedAt: Date.now() }))) cancelEdit();
+}
+
+/* reply to a message: a short quote travels with the new message */
+S.replyTo = null;
+function msgSnippet(m) {
+  if (m.t) return m.t.replace(/\s+/g, " ").slice(0, 120);
+  if (m.sticker && STICKERS[m.sticker]) return STICKERS[m.sticker].join(" ");
+  if (m.poll) return "Oylama: " + m.poll.q;
+  if (m.cst) return "Sticker" + (m.cst.label ? ": " + m.cst.label : "");
+  if ((m.imgs || []).length) return "Fotoğraf";
+  if ((m.files || []).length) return "Dosya: " + (m.files[0].name || "");
+  return "…";
+}
+function setReply(m) {
+  S.replyTo = { id: m.id, a: m.a, t: msgSnippet(m) };
+  renderReplyBar(); $("chat-in").focus();
+}
+function renderReplyBar() {
+  const bar = $("replybar"), r = S.replyTo;
+  bar.hidden = !r; bar.replaceChildren();
+  if (!r) return;
+  bar.style.setProperty("--qc", ucol(r.a));
+  bar.append(h("span", {}, "↩ "), nameEl(r.a), h("span", {}, " adlı kişiye yanıt:"), h("span", { class: "rt" }, r.t),
+    h("button", { class: "btn ghost sm", type: "button", "aria-label": "Yanıtı iptal et", onclick: () => { S.replyTo = null; renderReplyBar(); } }, "×"));
+}
+function jumpTo(id) {
+  const el = document.querySelector('[data-mid="' + String(id).replace(/[^A-Za-z0-9_-]/g, "") + '"]');
+  if (!el) { toast("Bu mesaj artık sohbette yok"); return; }
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1500);
+}
+$("chat-in").addEventListener("keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } });
+$("chat-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); });
+$("chat-in").addEventListener("paste", e => {
+  const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
+  if (fs.length) { e.preventDefault(); addChatImages(fs); }
+});
+$("chat").addEventListener("dragover", e => { e.preventDefault(); $("chat").classList.add("drag"); });
+$("chat").addEventListener("dragleave", e => { if (e.target === $("chat")) $("chat").classList.remove("drag"); });
+$("chat").addEventListener("drop", e => { e.preventDefault(); $("chat").classList.remove("drag"); addChatImages(e.dataTransfer.files); });
+
+/* emoji picker and the team's own sticker set */
+const EMOJI = {
+  "Yüzler": "😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😜 🤪 😎 🤩 🥳 😏 😒 😔 😢 😭 😤 😡 🤯 😱 🤔 🤫 🙄 😴 🤤 😬 🥲 💀 👻 🤖",
+  "El": "👍 👎 👏 🙌 👋 🤝 🙏 💪 ✌️ 🤞 👌 🤌 👀 🫡 ☝️ 👉",
+  "Oyun": "🎮 🕹️ 👾 🎲 🏆 🥇 ⚔️ 🛡️ 🏹 💣 💎 🪙 🗺️ 🧩 🐉 🧟 🧙 🚀 👑 🔑 💰 🎯",
+  "Simge": "❤️ 🧡 💛 💚 💙 💜 🖤 💔 🔥 ✨ ⭐ ⚡ 💥 💯 ✅ ❌ ⚠️ ❓ ❗ 🐛 🎉 💡 📌 ⏳"
+};
+const STICKERS = {
+  yaniyor: ["🔥", "YANIYOR"], koptum: ["😂", "KOPTUM"], helal: ["👏", "HELAL"], akil: ["🤯", "AKIL ALMAZ"],
+  oldum: ["💀", "ÖLDÜM"], oyna: ["🎮", "OYNAYALIM"], bug: ["🐛", "BUG VAR"], tamam: ["✅", "TAMAMDIR"],
+  uyku: ["😴", "UYKUM VAR"], gazla: ["🚀", "GAZLA"], sevdim: ["❤️", "SEVDİM"], emin: ["🤔", "EMİN DEĞİLİM"],
+  gg: ["🏆", "GG"], bekle: ["⏳", "BEKLE"], efsane: ["👑", "EFSANE"], noluyor: ["😱", "NOLUYOR"],
+  bendecalisiyor: ["🤷", "BENDE ÇALIŞIYOR"], ozellik: ["🙃", "BUG DEĞİL ÖZELLİK"], deadline: ["😰", "DEADLINE YARIN"], kahve: ["☕", "KAHVE LAZIM"],
+  patladi: ["💥", "KOD PATLADI"], yarin: ["🫠", "YARIN BAKARIZ"], beyin: ["🧠", "BEYNİM.EXE ÇÖKTÜ"], spagetti: ["🍝", "SPAGETTİ KOD"],
+  yolunda: ["🙂", "HER ŞEY YOLUNDA"], ctrlz: ["⏪", "CTRL+Z"], boss: ["🐉", "BOSS FIGHT"], lag: ["🐢", "LAG VAR"],
+  teksatir: ["😵", "TEK SATIR DEĞİŞTİ"], patch: ["🩹", "PATCH GELİYOR"], nerf: ["🔨", "NERF ŞART"], buff: ["💪", "BUFF LAZIM"],
+  kaydet: ["💾", "KAYDETTİN Mİ?"], rage: ["🤬", "RAGE QUIT"], easter: ["🥚", "EASTER EGG"], sabah: ["🌅", "SABAH OLDU"]
+};
+const BIG_EMOJI = /^(?:\p{Extended_Pictographic}|️|‍|\s)+$/u;
+const STK_KINDS = ["fikir", "mekanik", "hikaye", "sanat", "gorev", "hata"];
+function stickerEl(key, tag, extra) {
+  const [e, label] = STICKERS[key], k = STK_KINDS[Object.keys(STICKERS).indexOf(key) % STK_KINDS.length];
+  return h(tag || "div", Object.assign({ class: "stk", style: `--sc:var(--k-${k});--sb:var(--k-${k}-bg)` }, extra || {}),
+    h("span", { class: "se" }, e), h("span", { class: "st" }, label));
+}
+S.epTab = "Yüzler";
+function renderEmojiPop() {
+  const pop = $("emoji-pop");
+  const keepLabel = $("stk-label") ? $("stk-label").value : "";
+  const tabs = Object.keys(EMOJI).concat(["Sticker"]);
+  pop.replaceChildren(h("div", { class: "etabs" }, tabs.map(t => h("button", { type: "button", "aria-pressed": String(S.epTab === t),
+    onclick: () => { S.epTab = t; renderEmojiPop(); } }, t))),
+    S.epTab === "Sticker"
+      ? h("div", { class: "sgrid" },
+          (S.stickers || []).map(st => h("div", { class: "stkwrap" },
+            customStickerEl(st, "button", { type: "button", title: st.label || "", onclick: () => sendCustomSticker(st) }),
+            st.a === S.meId ? h("button", { class: "stkdel", type: "button", "aria-label": "Sticker'ı sil", onclick: () => write(() => S.db.doc("stickers/" + st.id).delete()) }, "×") : null)),
+          Object.keys(STICKERS).map(k => stickerEl(k, "button", { type: "button", title: STICKERS[k][1], onclick: () => sendSticker(k) })))
+      : h("div", { class: "egrid" }, EMOJI[S.epTab].split(" ").map(e => h("button", { type: "button", onclick: () => insertEmoji(e) }, e))),
+    S.epTab === "Sticker" && S.assets && S.meId ? h("div", { class: "stkadd" },
+      h("input", { class: "field", id: "stk-label", maxlength: "24", placeholder: "Kendi sticker'ın: yazı (isteğe bağlı)" }),
+      h("label", { class: "btn sm", for: "stk-file" }, "+ Resim seç ve ekle",
+        h("input", { type: "file", id: "stk-file", accept: IMG_TYPES.join(","), hidden: true, onchange: addCustomSticker }))) : null);
+  if ($("stk-label")) $("stk-label").value = keepLabel;
+}
+function customStickerEl(st, tag, extra) {
+  return h(tag || "div", Object.assign({ class: "stk cst", style: "--sc:" + ucol(st.a) + ";--sb:var(--paper-2)" }, extra || {}),
+    h("img", { src: imgUrl(st.img), alt: "" }), st.label ? h("span", { class: "st" }, st.label) : null);
+}
+async function sendCustomSticker(st) {
+  if (!S.meId) return;
+  toggleEmoji(false);
+  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), cst: { img: st.img, label: st.label || "", by: st.a } })))
+    setTimeout(() => renderChat(true), 0);
+}
+async function addCustomSticker(e) {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  const label = ($("stk-label").value || "").trim().toLocaleUpperCase("tr").slice(0, 24);
+  const got = await uploadMedia([f], { set textContent(v) { if (v) toast(v); } });
+  if (!got.images[0]) return;
+  if (await write(() => S.db.collection("stickers").add({ a: S.meId, img: got.images[0], label, at: Date.now() }))) {
+    $("stk-label").value = ""; toast("Sticker eklendi, ikiniz de kullanabilirsiniz");
+  }
+}
+function toggleEmoji(open) {
+  const pop = $("emoji-pop");
+  pop.hidden = open === undefined ? !pop.hidden : !open;
+  $("emoji-btn").setAttribute("aria-expanded", String(!pop.hidden));
+  if (!pop.hidden) renderEmojiPop();
+}
+function insertEmoji(e) {
+  const inp = $("chat-in");
+  const s = inp.selectionStart != null ? inp.selectionStart : inp.value.length, en = inp.selectionEnd != null ? inp.selectionEnd : s;
+  inp.setRangeText(e, s, en, "end"); inp.focus();
+}
+async function sendSticker(key) {
+  if (!S.meId) return;
+  toggleEmoji(false);
+  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setTimeout(() => renderChat(true), 0);
+}
+$("emoji-btn").addEventListener("click", () => toggleEmoji());
+
+/* polls on any topic: a chat message with poll {q, opts, closed}; votes in pv {userId: optionIndex} */
+S.pollDraft = null;
+function togglePollForm(open) {
+  const pop = $("poll-pop");
+  pop.hidden = open === undefined ? !pop.hidden : !open;
+  $("poll-btn").setAttribute("aria-expanded", String(!pop.hidden));
+  if (!pop.hidden) { if (!S.pollDraft) S.pollDraft = { q: "" }; renderPollForm(); setTimeout(() => $("poll-q") && $("poll-q").focus(), 0); }
+}
+function renderPollForm() {
+  const d = S.pollDraft, pop = $("poll-pop");
+  const q = h("input", { class: "field", id: "poll-q", maxlength: "200", placeholder: "Ne oylansın? Örn: Ana karakter hangi sınıf olsun?" });
+  q.value = d.q; q.addEventListener("input", () => { d.q = q.value; });
+  q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); startPoll(); } });
+  pop.replaceChildren(h("span", { class: "label" }, "Yeni oylama · onay / ret"), q,
+    h("div", { class: "actions" },
+      h("button", { class: "btn primary sm", type: "button", onclick: startPoll }, "Oylamayı başlat"),
+      h("button", { class: "btn ghost sm", type: "button", onclick: () => togglePollForm(false) }, "Vazgeç")),
+    h("p", { class: "err", id: "poll-err" }));
+}
+async function startPoll() {
+  const q = S.pollDraft.q.trim();
+  if (!q) { $("poll-err").textContent = "Oylamanın konusunu yaz."; return; }
+  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), poll: { q: q.slice(0, 200), opts: ["✓ Onaylıyorum", "✕ Reddediyorum"], yn: true, closed: false }, pv: {} }), $("poll-err"))) {
+    S.pollDraft = null; togglePollForm(false); setTimeout(() => renderChat(true), 0);
+  }
+}
+function pollEl(m) {
+  const p = m.poll, pv = m.pv || {}, closed = !!p.closed;
+  const votes = Object.entries(pv).filter(([, v]) => typeof v === "number");
+  const total = votes.length, mine = typeof pv[S.meId] === "number" ? pv[S.meId] : null;
+  const counts = (p.opts || []).map((_, i) => votes.filter(([, v]) => v === i).length), top = Math.max(0, ...counts);
+  return h("div", { class: "poll" + (closed ? " closed" : "") },
+    h("div", { class: "pq" }, "📊 ", p.q),
+    (p.opts || []).map((o, i) => {
+      const voters = votes.filter(([, v]) => v === i).map(([id]) => id), pct = total ? Math.round(voters.length * 100 / total) : 0;
+      return h("button", { class: "popt" + (mine === i ? " on" : "") + (closed && total && counts[i] === top ? " win" : ""), type: "button",
+        disabled: closed || !S.canWrite || !S.meId, style: "--p:" + pct + "%" + (p.yn ? ";--uc:var(--k-" + (i === 0 ? "gorev" : "hata") + ")" : ""),
+        onclick: () => votePoll(m, mine === i ? null : i) },
+        h("span", { class: "pl" }, (mine === i && !p.yn ? "✓ " : "") + o + (mine === i && p.yn ? "  (senin oyun)" : "")), h("span", { class: "pc" }, voters.length + " oy · %" + pct),
+        voters.length ? h("span", { class: "pav" }, voters.map(id => h("span", { title: who(id) }, avatar(id, "sm")))) : null);
+    }),
+    h("div", { class: "pf" }, total + " kişi oy verdi" + (closed ? " · oylama kapandı" : mine === null ? " · oy vermek için bir seçeneğe bas" : " · değiştirmek için başka seçeneğe bas"),
+      m.a === S.meId && !closed ? h("button", { class: "mdel", type: "button", style: "opacity:1", onclick: () => write(() => S.db.doc("chat/" + m.id).update({ poll: { closed: true } })) }, "oylamayı kapat") : null));
+}
+async function votePoll(m, i) {
+  if (!S.meId || (m.poll && m.poll.closed)) return;
+  await write(() => S.db.doc("chat/" + m.id).update({ pv: { [S.meId]: i } }));
+}
+$("poll-btn").addEventListener("click", () => { toggleEmoji(false); togglePollForm(); });
+/* composedPath keeps the click's ancestors even when a re-render has already removed the clicked button */
+const clickedIn = (e, ...ids) => e.composedPath().some(el => el && ids.includes(el.id));
+document.addEventListener("click", e => { if (!clickedIn(e, "poll-pop", "poll-btn")) { const pp = $("poll-pop"); if (!pp.hidden) togglePollForm(false); } });
+document.addEventListener("click", e => { if (!e.composedPath().some(el => el && (el.id === "emoji-pop" || el.id === "emoji-btn"))) toggleEmoji(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("emoji-pop").hidden) toggleEmoji(false); });
+$("f-chat").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
+$("chat-in").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+});
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); });
+
+/* ---------- "Claude'a iş ver": requests that Özgür's Claude Code session picks up and does ---------- */
+S.jobs = []; S.jobsPrev = null;
+const JOB_ST = {
+  bekliyor: ["wait", "Sırada"],
+  calisiyor: ["running", "Claude üzerinde çalışıyor…"],
+  soru: ["running", "Özgür'ün onayı bekleniyor"],
+  bitti: ["done", "✓ Bitti"],
+  iptal: ["stopped", "İptal edildi"]
+};
+const jobOpen = j => !j.status || j.status === "bekliyor" || j.status === "calisiyor" || j.status === "soru";
+function startJobs() {
+  if (S.jobsUnsub || !S.db) return;
+  S.jobsUnsub = S.db.collection("jobs").orderBy("at", "desc").limit(50).onSnapshot(snap => {
+    const prev = S.jobsPrev;
+    S.jobs = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    if (prev) for (const j of S.jobs) {
+      const was = prev[j.id];
+      if (!was && j.a !== S.meId && j.at > S.liveSince) {
+        playSound("reply");
+        render().then(() => notify({ ai: true, by: j.a, text: "Claude'a iş verdi", title: String(j.t).slice(0, 140) }));
+      } else if (was && was !== "bitti" && j.status === "bitti") {
+        playSound("ai");
+        render().then(() => notify({ ai: true, by: j.a, text: "→ Claude işi bitirdi ✦", title: String(j.t).slice(0, 140) }));
+      }
+    }
+    S.jobsPrev = Object.fromEntries(S.jobs.map(j => [j.id, j.status || "bekliyor"]));
+    render();
+  }, () => {});
+}
+function mdInline(s) {
+  return String(s).split(/(\*\*[^*]+\*\*)/g).flatMap(part => /^\*\*[^*]+\*\*$/.test(part) ? [h("b", {}, part.slice(2, -2))] : linkify(part));
+}
+function mdLite(text) {
+  return String(text || "").split("\n").map(line => {
+    const hd = line.match(/^#{1,4}\s+(.*)/);
+    if (hd) return h("div", { class: "mdh" }, mdInline(hd[1]));
+    const li = line.match(/^(\s*)[-*•]\s+(.*)/);
+    if (li) return h("div", { style: "padding-left:" + (10 + li[1].length * 6) + "px" }, "• ", mdInline(li[2]));
+    return line.trim() ? h("div", {}, mdInline(line)) : h("div", { class: "mdsp" });
+  });
+}
+async function addJob() {
+  const inp = $("ai-in"), t = inp.value.trim();
+  if (!t || !S.meId) return;
+  inp.value = "";
+  if (!await write(() => S.db.collection("jobs").add({ a: S.meId, t: t.slice(0, 4000), at: Date.now(), status: "bekliyor" }), $("ai-err"))) inp.value = t;
+  else toast("İş sıraya eklendi");
+}
+/* auto-off window, adjustable by anyone in 15-minute steps: 5..120 minutes, default 30 */
+const claudeMinutes = () => Math.min(480, Math.max(5, Number(S.settings && S.settings.claude && S.settings.claude.minutes) || 30));
+const fmtMins = m => m >= 60 ? Math.floor(m / 60) + " sa" + (m % 60 ? " " + (m % 60) + " dk" : "") : m + " dk";
+async function adjustMinutes(delta) {
+  const next = Math.min(480, Math.max(5, claudeMinutes() + delta));
+  if (await write(() => S.db.doc("team/settings").update({ claude: { minutes: next } }))) toast("Süre " + fmtMins(next) + " oldu");
+}
+async function toggleClaude(on) {
+  const cl = (S.settings && S.settings.claude) || {};
+  const patch = { on, by: S.meId };
+  if (on) patch.since = Date.now();
+  if (await write(() => S.db.doc("team/settings").update({ claude: patch })))
+    toast(on ? "Claude açılıyor, en geç 1 dakika içinde işlere bakmaya başlar" : "Claude kapatıldı");
+  return cl;
+}
+function renderJobs() {
+  const box = $("ai-runs"); if (!box) return;
+  const open = S.jobs.filter(jobOpen);
+  $("n-ai").hidden = !open.length; $("n-ai").textContent = open.length;
+  /* on: 1-minute checks; 30 minutes after it was opened or the last job, Claude switches itself off */
+  const cl = (S.settings && S.settings.claude) || {};
+  const lastJob = S.jobs.reduce((m, j) => Math.max(m, j.at || 0), 0);
+  const mins = claudeMinutes();
+  const left = cl.on ? Math.max(0, Math.ceil((Math.max(cl.since || 0, lastJob) + mins * 60000 - Date.now()) / 60000)) : 0;
+  const starting = cl.on && !(cl.ack >= cl.since);
+  const st = $("claude-status");
+  st.className = "cstat " + (cl.on ? (starting ? "starting" : "on") : "off");
+  st.replaceChildren(h("span", { class: "cdot", "aria-hidden": "true" }),
+    h("div", { class: "ctext" },
+      h("div", {}, cl.on ? (starting ? "Claude açılıyor… en geç 1 dakika içinde devreye girer" : "Claude açık · her dakika yeni işlere bakıyor") : "Claude kapalı · işler sırada bekler"),
+      h("div", { class: "csub" }, cl.on
+        ? (cl.by ? who(cl.by) + " açtı · " : "") + "yeni iş gelmezse yaklaşık " + left + " dk sonra kendiliğinden kapanır"
+        : "Özgür açınca " + fmtMins(mins) + " açık kalır, her yeni iş süreyi baştan başlatır. Bu sürede iş gelmezse Claude tamamen kapanır."),
+      S.canWrite && S.meId && cl.on ? h("div", { class: "tadj" },
+        h("button", { class: "btn sm", type: "button", disabled: mins <= 5, onclick: () => adjustMinutes(-15) }, "− 15 dk"),
+        h("span", { class: "mono" }, "Süre: " + fmtMins(mins)),
+        h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(15) }, "+ 15 dk"),
+        h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
+        h("span", { class: "csub" }, "en fazla 8 saat")) : null),
+    S.canWrite && S.meId && cl.on ? h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat") : null);
+  box.replaceChildren();
+  if (!S.jobs.length) box.append(h("div", { class: "empty" }, h("strong", {}, "Henüz iş yok"),
+    "Soldan Claude'a yapmasını istediğin şeyi yaz. Sırası gelince yapılır ve sonucu burada görünür."));
+  for (const j of S.jobs) {
+    const [cls, label] = JOB_ST[j.status || "bekliyor"] || JOB_ST.bekliyor;
+    const cancel = j.a === S.meId && (!j.status || j.status === "bekliyor")
+      ? h("button", { class: "btn ghost sm", type: "button", onclick: () => write(() => S.db.doc("jobs/" + j.id).update({ status: "iptal" })) }, "İptal et")
+      : null;
+    box.append(h("article", { class: "airun", style: "--uc:" + ucol(j.a) },
+      h("div", { class: "airh" }, avatar(j.a, "sm"), nameEl(j.a), h("span", { class: "mt" }, " · " + ago(j.at)),
+        h("span", { class: "aist " + cls }, label)),
+      h("div", { class: "aipr" }, linkify(j.t)),
+      j.answer ? h("div", { class: "aians" }, mdLite(j.answer)) : null,
+      cancel));
+  }
+}
+$("f-ai").addEventListener("submit", e => { e.preventDefault(); addJob(); });
+$("ai-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
+setInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
+
+/* ---------- game progress + release notes ---------- */
+const UPD_TYPES = { ozellik: ["Yeni özellik", "gorev"], duzeltme: ["Hata düzeltme", "hata"], icerik: ["İçerik / hikâye", "hikaye"], denge: ["Denge / ayar", "mekanik"], gorsel: ["Görsel / ses", "sanat"], diger: ["Diğer", "fikir"] };
+const PHASES = { fikir: "Fikir aşaması", prototip: "Prototip", alfa: "Alfa", beta: "Beta", yayin: "Yayında" };
+const PHASE_ORDER = Object.keys(PHASES);
+S.updates = []; S.updPrev = null; S.updSeen = Number(ls.get("atolye-upd-seen")) || 0;
+function markUpdSeen() { S.updSeen = Date.now(); ls.set("atolye-upd-seen", String(S.updSeen)); }
+function startUpdates() {
+  if (S.updUnsub || !S.db) return;
+  S.updUnsub = S.db.collection("updates").orderBy("at", "desc").limit(200).onSnapshot(snap => {
+    const prev = S.updPrev;
+    S.updates = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(u => typeof u.at === "number");
+    const fresh = prev ? S.updates.filter(u => !prev.has(u.id) && u.a !== S.meId && u.at > S.liveSince) : [];
+    S.updPrev = new Set(S.updates.map(u => u.id));
+    if (S.view === "upd" && !document.hidden) markUpdSeen();
+    if (fresh.length) {
+      playSound("new");
+      render().then(() => notify({ upd: true, by: fresh[0].a, text: "güncelleme yayınladı", title: (fresh[0].ver ? fresh[0].ver + " · " : "") + fresh[0].title }));
+    } else render();
+  }, () => {});
+  startBuilds();
+}
+/* ---------- game files: version history (newest = güncel, older ones stay) ---------- */
+S.builds = []; S.buildPrev = null; S.buildDel = null; S.buildUploading = false;
+const BUILD_MAX = 20 * 1024 * 1024, BUILD_FILES = 5;
+function startBuilds() {
+  if (S.buildUnsub || !S.db) return;
+  S.buildUnsub = S.db.collection("builds").orderBy("at", "desc").limit(200).onSnapshot(snap => {
+    const prev = S.buildPrev;
+    S.builds = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(b => typeof b.at === "number");
+    const fresh = prev ? S.builds.filter(b => !prev.has(b.id) && b.a !== S.meId && b.at > S.liveSince) : [];
+    S.buildPrev = new Set(S.builds.map(b => b.id));
+    if (fresh.length) {
+      playSound("new");
+      render().then(() => notify({ upd: true, by: fresh[0].a, text: "oyunun yeni sürümünü yükledi", title: fresh[0].ver + (fresh[0].note ? " · " + fresh[0].note : "") }));
+    } else render();
+  }, () => {});
+}
+function renderBuilds() {
+  const list = $("build-list"); if (!list || !S.builds) return;
+  $("bd-file").disabled = !S.assets;
+  $("bd-submit").disabled = S.buildUploading;
+  $("bd-submit").textContent = S.buildUploading ? "Yükleniyor…" : "Sürümü yükle";
+  list.replaceChildren();
+  if (!S.builds.length) list.append(h("div", { class: "empty" }, h("strong", {}, "Henüz oyun dosyası yok"),
+    "Soldan oyunun güncel sürümünü yükle. Her yeni yükleme en üste \"güncel\" olarak gelir, eskiler aşağıda saklanır."));
+  S.builds.forEach((b, i) => {
+    const mine = b.a === S.meId && S.canWrite;
+    const files = Array.isArray(b.files) ? b.files : [];
+    const link = typeof b.link === "string" && /^https?:\/\//i.test(b.link) ? b.link : null;
+    list.append(h("article", { class: "airun" + (i ? " old" : ""), style: "--uc:" + ucol(b.a) },
+      h("div", { class: "airh" }, h("span", { class: "uver" }, b.ver || "sürüm"), i ? h("span", { class: "bold" }, "eski") : h("span", { class: "bcur" }, "güncel"),
+        h("span", { class: "mt", style: "margin-left:auto" }, new Date(b.at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }))),
+      b.note ? h("div", { class: "aians" }, b.note) : null,
+      files.length || link ? h("div", { class: "mfiles", style: "width:100%" },
+        files.map(fl => h("a", { class: "mfile", href: imgUrl(fl.id), target: "_blank", rel: "noopener", download: fl.name || "dosya", title: "İndir" },
+          h("span", { class: "fx" }, String(fl.name || "").split(".").pop().slice(0, 4) || "dosya"),
+          h("span", { class: "fn" }, fl.name || "dosya"), h("span", { class: "fs" }, fmtSize(fl.size || 0)))),
+        link ? h("a", { class: "mfile", href: link, target: "_blank", rel: "noopener noreferrer", title: "Bağlantıyı aç" },
+          h("span", { class: "fx" }, "link"), h("span", { class: "fn" }, link.replace(/^https?:\/\//i, "")), h("span", { class: "fs" }, "dış bağlantı")) : null) : null,
+      h("div", { class: "airh" }, avatar(b.a, "sm"), nameEl(b.a), h("span", { class: "mt" }, " · " + ago(b.at)),
+        mine && S.buildDel !== b.id ? h("span", { class: "own", style: "margin-left:auto" },
+          h("button", { type: "button", class: "del", onclick: () => { S.buildDel = b.id; renderBuilds(); } }, "sil")) : null),
+      mine && S.buildDel === b.id ? h("div", { class: "confirm" }, h("span", {}, "Bu sürüm ve dosyaları silinsin mi?"),
+        h("button", { class: "btn danger sm", type: "button", onclick: async () => {
+          const cur = S.builds.find(x => x.id === b.id); if (!cur || cur.a !== S.meId) return;
+          if (await write(() => S.db.doc("builds/" + b.id).delete())) {
+            S.buildDel = null; toast("Sürüm silindi");
+            if (S.assets) for (const fl of files) S.assets.delete(fl.id).catch(() => {});
+          }
+        } }, "Evet, sil"),
+        h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.buildDel = null; renderBuilds(); } }, "Vazgeç")) : null));
+  });
+}
+$("f-build").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!S.meId || S.buildUploading) return;
+  const err = $("bd-err"); err.textContent = "";
+  const ver = $("bd-ver").value.trim().slice(0, 20), note = $("bd-note").value.trim().slice(0, 200);
+  const link = $("bd-link").value.trim().slice(0, 500), picked = [...$("bd-file").files];
+  if (!ver) { err.textContent = "Sürüm adını yaz (ör. v0.4)."; return; }
+  if (!picked.length && !link) { err.textContent = "Bir dosya seç ya da bağlantı ekle."; return; }
+  if (link && !/^https?:\/\//i.test(link)) { err.textContent = "Bağlantı http:// veya https:// ile başlamalı."; return; }
+  if (picked.length && !S.assets) { err.textContent = "Dosya yüklemek için sayfanın sahibi seni Düzenleyici yapmalı. Şimdilik bağlantı ekleyebilirsin."; return; }
+  if (picked.length > BUILD_FILES) { err.textContent = "Bir sürüme en fazla " + BUILD_FILES + " dosya eklenebilir."; return; }
+  for (const f of picked) {
+    const type = IMG_TYPES.includes(f.type) ? f.type : fileType(f);
+    if (!type) { err.textContent = (f.name || "Dosya") + ": bu tür yüklenemiyor. Zip/exe gibi paketleri Drive veya itch.io'ya yükleyip bağlantısını ekle. Desteklenen: görsel, PDF, MP4/WEBM, TXT, MD, CSV, JSON."; return; }
+    if (f.size > BUILD_MAX) { err.textContent = (f.name || "Dosya") + " çok büyük (" + fmtSize(f.size) + "). Dosya başına en fazla 20 MB yüklenebilir; büyük dosyalar için bağlantı ekle."; return; }
+  }
+  S.buildUploading = true; renderBuilds();
+  const files = [];
+  try {
+    for (const f of picked) {
+      const type = IMG_TYPES.includes(f.type) ? f.type : fileType(f);
+      const r = await S.assets.upload(f, { type });
+      files.push({ id: r.id, name: String(f.name || "dosya").slice(0, 120), type, size: f.size });
+    }
+  } catch (x) {
+    const c = (x && x.code) || "";
+    err.textContent = c === "unsupported_type" ? "Bu dosya türü yüklenemiyor. Zip/exe gibi paketler için bağlantı ekle."
+      : c === "quota_or_state" ? "Dosya alanı dolu. Eski sürümlerden birini silip tekrar dene."
+      : assetErr(x).replace("Görsel yüklenemedi", "Dosya yüklenemedi").replace("görsel yükleyemiyorsun", "dosya yükleyemiyorsun");
+    for (const fl of files) S.assets.delete(fl.id).catch(() => {});
+    S.buildUploading = false; renderBuilds(); return;
+  }
+  const doc = { a: S.meId, at: Date.now(), ver, note, files, link: link || "" };
+  const ok = await write(() => S.db.collection("builds").add(doc), err);
+  S.buildUploading = false;
+  if (ok) {
+    $("bd-ver").value = ""; $("bd-note").value = ""; $("bd-link").value = ""; $("bd-file").value = "";
+    toast(ver + " güncel sürüm olarak yüklendi, ekibe bildirim gitti");
+  } else for (const fl of files) S.assets.delete(fl.id).catch(() => {});
+  renderBuilds();
+});
+function renderUpd() {
+  const list = $("upd-list"); if (!list) return;
+  renderBuilds();
+  const unread = S.updates.filter(u => u.a !== S.meId && u.at > S.updSeen).length;
+  $("n-upd").hidden = !unread || S.view === "upd"; $("n-upd").textContent = unread;
+  const p = (S.settings && S.settings.progress) || {};
+  const pct = Math.max(0, Math.min(100, Number(p.pct) || 0));
+  $("upd-bar").style.width = pct + "%";
+  if (document.activeElement !== $("upd-pct")) { $("upd-pct").value = pct; $("upd-pctv").textContent = "%" + pct; }
+  if (document.activeElement !== $("upd-phase")) $("upd-phase").value = p.phase || "fikir";
+  const curI = PHASE_ORDER.indexOf(PHASES[p.phase] ? p.phase : "fikir");
+  for (const o of $("upd-phase").options) { const i = PHASE_ORDER.indexOf(o.value); o.disabled = i > curI + 1 || (i === curI + 1 && pct < 100); }
+  $("upd-pmeta").textContent = p.at ? (PHASES[p.phase] || "Fikir aşaması") + " · %" + pct + " · son güncelleyen " + who(p.by) + ", " + ago(p.at) : "Henüz durum girilmedi. Aşamayı ve yüzdeyi seç, herkes görsün.";
+  list.replaceChildren();
+  if (!S.updates.length) list.append(h("div", { class: "empty" }, h("strong", {}, "Henüz güncelleme notu yok"),
+    "Oyunda bir şey değiştiğinde soldan not ekle: sürüm, ne eklendi, ne düzeltildi. Ekip buradan takip eder."));
+  for (const u of S.updates) {
+    const t = UPD_TYPES[u.type] || UPD_TYPES.diger;
+    const mine = u.a === S.meId && S.canWrite;
+    let del = null;
+    if (mine && !(S.updEdit && S.updEdit.id === u.id) && S.updDel !== u.id) {
+      del = h("span", { class: "own", style: "margin-left:auto" },
+        h("button", { type: "button", onclick: () => { S.updEdit = { id: u.id, ver: u.ver || "", title: u.title || "", body: u.body || "" }; S.updDel = null; renderUpd(); if ($("ue-title")) $("ue-title").focus(); } }, "düzenle"),
+        h("button", { type: "button", class: "del", onclick: () => { S.updDel = u.id; S.updEdit = null; renderUpd(); } }, "sil"));
+    }
+    if (mine && S.updEdit && S.updEdit.id === u.id) { list.append(updEditForm(u)); continue; }
+    list.append(h("article", { class: "airun", style: "--uc:" + ucol(u.a) },
+      h("div", { class: "airh" }, u.ver ? h("span", { class: "uver" }, u.ver) : null, h("span", { class: "tag", style: kindVars(t[1]) }, t[0]),
+        typeof u.pct === "number" ? h("span", { class: "mt" }, "oyun %" + u.pct) : null,
+        h("span", { class: "mt", style: "margin-left:auto" }, new Date(u.at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }))),
+      h("h3", { class: "utitle" }, u.title),
+      u.body ? h("div", { class: "aians" }, mdLite(u.body)) : null,
+      h("div", { class: "airh" }, avatar(u.a, "sm"), nameEl(u.a), h("span", { class: "mt" }, " · " + ago(u.at) + (u.ed ? " · düzenlendi" : "")), del),
+      mine && S.updDel === u.id ? h("div", { class: "confirm" }, h("span", {}, "Bu güncelleme notu silinsin mi?"),
+        h("button", { class: "btn danger sm", type: "button", onclick: async () => {
+          const cur = S.updates.find(x => x.id === u.id); if (!cur || cur.a !== S.meId) return;
+          if (await write(() => S.db.doc("updates/" + u.id).delete())) { S.updDel = null; toast("Güncelleme notu silindi"); }
+        } }, "Evet, sil"),
+        h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.updDel = null; renderUpd(); } }, "Vazgeç")) : null));
+  }
+}
+function updEditForm(u) {
+  const e = S.updEdit, foc = document.activeElement && document.activeElement.id;
+  const verIn = h("input", { class: "field", id: "ue-ver", value: e.ver, maxlength: "20", placeholder: "Sürüm (örn. v0.3)", "aria-label": "Sürüm" });
+  const titleIn = h("input", { class: "field", id: "ue-title", value: e.title, maxlength: "120", placeholder: "Başlık", "aria-label": "Başlık" });
+  const bodyIn = h("textarea", { class: "field", id: "ue-body", rows: "5", placeholder: "Ne değişti?", "aria-label": "Açıklama" });
+  bodyIn.value = e.body;
+  verIn.addEventListener("input", () => { e.ver = verIn.value; });
+  titleIn.addEventListener("input", () => { e.title = titleIn.value; });
+  bodyIn.addEventListener("input", () => { e.body = bodyIn.value; });
+  const err = h("p", { class: "err" });
+  const save = async () => {
+    const title = e.title.trim(); if (!title) { err.textContent = "Başlık boş olamaz."; return; }
+    const cur = S.updates.find(x => x.id === u.id); if (!cur || cur.a !== S.meId) { S.updEdit = null; renderUpd(); return; }
+    if (await write(() => S.db.doc("updates/" + u.id).update({ ver: e.ver.trim(), title, body: e.body.trim(), ed: Date.now() }), err)) { S.updEdit = null; renderUpd(); toast("Güncelleme notu düzenlendi"); }
+  };
+  const box = h("article", { class: "airun", style: "--uc:" + ucol(u.a) + ";display:grid;gap:8px" },
+    h("div", { class: "airh" }, h("strong", {}, "Güncelleme notunu düzenle")),
+    verIn, titleIn, bodyIn, err,
+    h("div", { class: "actions" },
+      h("button", { class: "btn primary sm", type: "button", onclick: save }, "Kaydet"),
+      h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.updEdit = null; renderUpd(); } }, "Vazgeç")));
+  if (foc && /^ue-/.test(foc)) setTimeout(() => { const el = $(foc); if (el) el.focus(); }, 0);
+  return box;
+}
+async function saveProgress(patch) {
+  if (await write(() => S.db.doc("team/settings").update({ progress: Object.assign({ at: Date.now(), by: S.meId }, patch) }))) toast("Oyunun durumu güncellendi");
+}
+$("upd-pct").addEventListener("input", e => { $("upd-pctv").textContent = "%" + e.target.value; $("upd-bar").style.width = e.target.value + "%"; });
+$("upd-pct").addEventListener("change", e => saveProgress({ pct: Number(e.target.value) }));
+$("upd-phase").addEventListener("change", e => {
+  const p = (S.settings && S.settings.progress) || {};
+  const cur = PHASES[p.phase] ? p.phase : "fikir", pct = Number(p.pct) || 0;
+  const from = PHASE_ORDER.indexOf(cur), to = PHASE_ORDER.indexOf(e.target.value);
+  if (to > from + 1) { e.target.value = cur; toast("Aşamalar sırayla geçilir, aradaki aşamayı atlayamazsın."); return; }
+  if (to === from + 1 && pct < 100) { e.target.value = cur; toast("Bu aşama henüz %" + pct + ". Önce %100 tamamla, sonra sonraki aşamaya geçebilirsin."); return; }
+  saveProgress(to === from + 1 ? { phase: e.target.value, pct: 0 } : { phase: e.target.value });
+});
+$("f-upd").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title = $("upd-title").value.trim(); if (!title || !S.meId) return;
+  const p = (S.settings && S.settings.progress) || {};
+  const doc = { a: S.meId, at: Date.now(), ver: $("upd-ver").value.trim().slice(0, 20), type: $("upd-type").value, title: title.slice(0, 120),
+    body: $("upd-body").value.trim().slice(0, 8000), pct: Math.max(0, Math.min(100, Number(p.pct) || 0)) };
+  if (await write(() => S.db.collection("updates").add(doc), $("upd-err"))) {
+    $("upd-title").value = ""; $("upd-body").value = ""; toast("Güncelleme yayınlandı, ekibe bildirim gitti");
+  }
+});
+
+/* ---------- settings ---------- */
+$("btn-settings").addEventListener("click", () => {
+  const pop = $("pop-settings"); pop.hidden = !pop.hidden;
+  $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".menu")) { $("pop-settings").hidden = true; $("btn-settings").setAttribute("aria-expanded", "false"); }
+});
+$("f-game").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adı kaydedildi");
+});
+$("f-pass").addEventListener("submit", async e => {
+  e.preventDefault();
+  const ph = await hash($("st-pass").value);
+  const old = ls.get(LS_KEY);
+  ls.set(LS_KEY, ph);
+  if (await write(() => S.db.doc("team/settings").update({ passHash: ph }))) { $("st-pass").value = ""; toast("Şifre değiştirildi"); }
+  else ls.set(LS_KEY, old || "");
+});
+$("btn-lock").addEventListener("click", () => { ls.del(LS_KEY); $("pop-settings").hidden = true; route(); });
+
+/* ---------- images ---------- */
+const IMG_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+const VID_TYPES = ["video/mp4", "video/webm"];
+const imgUrl = id => "/_blob/" + id;
+S.newImages = []; S.newVideos = []; S.uploading = 0;
+function mediaOk(n, m) {
+  const im = (n.images || []).length, vd = (n.videos || []).length;
+  return m === "all" || (m === "text" && !im && !vd) || (m === "image" && im > 0) || (m === "video" && vd > 0);
+}
+function cardMedia(n) {
+  const im = n.images || [], vd = n.videos || [];
+  if (!im.length && !vd.length) return null;
+  const label = [im.length && im.length + " görsel", vd.length && vd.length + " video"].filter(Boolean).join(" · ");
+  const el = im.length ? h("img", { src: imgUrl(im[0]), alt: "", loading: "lazy" })
+    : h("video", { src: imgUrl(vd[0]), controls: true, preload: "metadata", playsinline: true, onclick: e => e.stopPropagation() });
+  return h("div", { class: "card-img" + (im.length ? "" : " vid"), onclick: im.length ? null : e => e.stopPropagation() }, el, h("span", { class: "imgn" }, label));
+}
+function assetErr(e) {
+  const c = (e && e.code) || "bilinmiyor";
+  if (c === "too_large") return "Dosya 20 MB'tan büyük.";
+  if (c === "unsupported_type") return "Sadece PNG, JPG, GIF, WEBP görseller ve MP4, WEBM videolar yüklenebilir.";
+  if (c === "quota_or_state") return "Görsel alanı dolu. Eski görselleri kaldırıp tekrar dene.";
+  if (c === "rate_limited") return "Çok hızlı yükleniyor. Biraz bekleyip tekrar dene.";
+  if (c === "not_granted" || c === "capability_disabled") return "Bu hesapla görsel yükleyemiyorsun. Sahibi seni Düzenleyici yapmalı.";
+  return "Görsel yüklenemedi (" + c + ").";
+}
+async function uploadMedia(files, errEl) {
+  const out = { images: [], videos: [] };
+  if (!S.assets) { errEl.textContent = "Görsel ve video yükleme sadece Düzenleyicilere açık."; return out; }
+  for (const f of files) {
+    const isImg = IMG_TYPES.includes(f.type), isVid = VID_TYPES.includes(f.type);
+    if (!isImg && !isVid) { errEl.textContent = (f.name || "Dosya") + ": sadece PNG, JPG, GIF, WEBP görseller ve MP4, WEBM videolar yüklenebilir."; continue; }
+    if (f.size > 20 * 1024 * 1024) { errEl.textContent = (f.name || "Dosya") + " 20 MB'tan büyük."; continue; }
+    try { const id = (await S.assets.upload(f, { type: f.type })).id; (isImg ? out.images : out.videos).push(id); }
+    catch (e) { errEl.textContent = assetErr(e); }
+  }
+  return out;
+}
+function lightbox(id) {
+  const lb = h("div", { class: "lightbox", role: "dialog", "aria-label": "Görsel", onclick: () => lb.remove() }, h("img", { src: imgUrl(id), alt: "" }));
+  document.body.append(lb);
+}
+function renderNewThumbs() {
+  const box = $("nw-thumbs"); box.replaceChildren();
+  for (const id of S.newImages) box.append(h("div", { class: "thumb" }, h("img", { src: imgUrl(id), alt: "" }),
+    h("button", { type: "button", "aria-label": "Görseli çıkar", onclick: () => {
+      S.newImages = S.newImages.filter(x => x !== id); renderNewThumbs();
+      if (S.assets) S.assets.delete(id).catch(() => {});
+    } }, "×")));
+  for (const id of S.newVideos) box.append(h("div", { class: "thumb" }, h("video", { src: imgUrl(id) + "#t=0.1", muted: true, preload: "metadata" }),
+    h("button", { type: "button", "aria-label": "Videoyu çıkar", onclick: () => {
+      S.newVideos = S.newVideos.filter(x => x !== id); renderNewThumbs();
+      if (S.assets) S.assets.delete(id).catch(() => {});
+    } }, "×")));
+  for (let i = 0; i < S.uploading; i++) box.append(h("div", { class: "thumb loading" }, "yükleniyor"));
+  $("nw-submit").disabled = S.uploading > 0;
+}
+async function addNewImages(files) {
+  files = [...files].filter(f => f.type.startsWith("image/") || f.type.startsWith("video/"));
+  if (!files.length) return;
+  $("nw-err").textContent = "";
+  S.uploading += files.length; renderNewThumbs();
+  const got = await uploadMedia(files, $("nw-err"));
+  S.uploading -= files.length; S.newImages.push(...got.images); S.newVideos.push(...got.videos); renderNewThumbs();
+}
+$("nw-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addNewImages(fs); });
+$("f-new").addEventListener("paste", e => {
+  const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
+  if (fs.length) { e.preventDefault(); addNewImages(fs); }
+});
+$("f-new").addEventListener("dragover", e => { e.preventDefault(); $("f-new").classList.add("drag"); });
+$("f-new").addEventListener("dragleave", () => $("f-new").classList.remove("drag"));
+$("f-new").addEventListener("drop", e => { e.preventDefault(); $("f-new").classList.remove("drag"); addNewImages(e.dataTransfer.files); });
+
+/* ---------- new note ---------- */
+function renderNewKinds() {
+  const box = $("nw-kinds"); box.replaceChildren();
+  for (const [k, n] of KINDS) box.append(h("button", {
+    type: "button", class: "chip k", style: kindVars(k), "aria-pressed": String(S.newKind === k),
+    onclick: () => { S.newKind = k; renderNewKinds(); }
+  }, h("span", { class: "dot", style: `background:var(--k-${k})` }), n));
+}
+$("f-new").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title = $("nw-title").value.trim(); if (!title) return;
+  const now = Date.now(), btn = $("nw-submit");
+  btn.disabled = true;
+  const ok = await write(() => S.db.collection("notes").add({
+    title, body: $("nw-body").value.trim(), kind: S.newKind, status: "acik",
+    author: S.meId, createdAt: now, updatedAt: now, updatedBy: S.meId, replies: [], images: S.newImages.slice(), videos: S.newVideos.slice()
+  }), $("nw-err"));
+  btn.disabled = false;
+  if (ok) { $("nw-title").value = ""; $("nw-body").value = ""; S.newImages = []; S.newVideos = []; renderNewThumbs(); toast("Not eklendi"); }
+});
+
+/* ---------- filters ---------- */
+/* starred open notes live in their own tab and leave the work desk; starred finished notes stay in Bitenler */
+function inView(n) { return S.view === "done" ? n.status === "bitti" : n.status !== "bitti" && (S.view === "star") === !!n.starred; }
+function setView(v) {
+  if (v !== "chat") S.unreadFrom = null;
+  S.view = v; S.f.status = "all";
+  const chat = v === "chat", ai = v === "ai", upd = v === "upd", wide = chat || ai || upd;
+  $("wrap").classList.toggle("chatmode", wide);
+  $("chat").hidden = !chat; $("ai").hidden = !ai; $("upd").hidden = !upd; $("cards").hidden = wide; $("mainbar").hidden = wide;
+  if (upd) { markUpdSeen(); renderUpd(); }
+  if (ai) setTimeout(() => $("ai-in").focus(), 0);
+  renderFilters(); renderCards();
+  if (chat) { renderChat(true); markChatSeen(); setTimeout(() => $("chat-in").focus(), 0); }
+}
+$("tab-active").addEventListener("click", () => setView("active"));
+$("tab-star").addEventListener("click", () => setView("star"));
+$("tab-done").addEventListener("click", () => setView("done"));
+$("tab-chat").addEventListener("click", () => setView("chat"));
+$("tab-ai").addEventListener("click", () => setView("ai"));
+$("tab-upd").addEventListener("click", () => setView("upd"));
+$("q").addEventListener("input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); });
+function seg(boxId, opts, key) {
+  const box = $(boxId); box.replaceChildren();
+  for (const [v, n] of opts) box.append(h("button", {
+    type: "button", "aria-pressed": String(S.f[key] === v),
+    onclick: () => { S.f[key] = v; renderFilters(); renderCards(); }
+  }, n));
+}
+function renderFilters() {
+  seg("flt-who", [["all", "Hepsi"], ["me", "Benim"], ["them", "Arkadaşın"]], "who");
+  const inDone = S.view === "done";
+  $("lbl-status").hidden = $("flt-status").hidden = inDone;
+  if (!inDone) {
+    seg("flt-status", [["all", "Hepsi"]].concat(STATUS.filter(s => s[0] !== "bitti"), [["working", "İlgilenilen"]]), "status");
+    $("flt-status").style.gridTemplateColumns = "repeat(2, 1fr)";
+  }
+  seg("flt-media", [["all", "Hepsi"], ["text", "Metin"], ["image", "Görsel"], ["video", "Video"]], "media");
+  const box = $("flt-kinds"); box.replaceChildren();
+  const count = k => S.notes.filter(n => inView(n) && (k === "all" || n.kind === k)).length;
+  for (const [k, n] of [["all", "Hepsi"]].concat(KINDS)) box.append(h("button", {
+    type: "button", class: k === "all" ? "chip" : "chip k", style: k !== "all" && kindVars(k), "aria-pressed": String(S.f.kind === k),
+    onclick: () => { S.f.kind = k; renderFilters(); renderCards(); }
+  }, k !== "all" && h("span", { class: "dot", style: `background:var(--k-${k})` }), n, h("span", { class: "n" }, count(k))));
+}
+
+/* ---------- main render ---------- */
+/* fresh = changed by someone else since my last visit, unless I opened that note since */
+function isFresh(n) {
+  const keep = S.prevSeen;
+  if (!keep) return false;
+  S.prevSeen = Math.max(keep, (S.seenNotes || {})[n.id] || 0);
+  try { return isFresh0(n); } finally { S.prevSeen = keep; }
+}
+/* red dot: someone else shared this note after my last visit and I haven't opened it yet */
+function isUnseenNew(n) {
+  const since = S.prevSeen || S.liveSince;
+  if (!S.meId || n.author === S.meId || !since) return false;
+  return n.createdAt > since && !(S.seenNotes || {})[n.id];
+}
+function isFresh0(n) {
+  if (!S.prevSeen) return false;
+  if (n.updatedAt > S.prevSeen && n.updatedBy !== S.meId) return true;
+  if (Object.entries(n.votes || {}).some(([uid, val]) => val && uid !== S.meId && val.at > S.prevSeen)) return true;
+  if (workers(n).some(w => w.id !== S.meId && w.at > S.prevSeen)) return true;
+  if (Object.values(n.rvotes || {}).some(m => Object.entries(m || {}).some(([uid, val]) => val && uid !== S.meId && val.at > S.prevSeen))) return true;
+  return (n.replies || []).some(r => r.at > S.prevSeen && r.a !== S.meId);
+}
+async function render() {
+  const ids = new Set();
+  for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
+  if (S.meId) ids.add(S.meId);
+  for (const m of S.chat || []) ids.add(m.a);
+  for (const j of S.jobs || []) ids.add(j.a);
+  for (const u of S.updates || []) ids.add(u.a);
+  if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
+  if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
+  ids.delete(undefined); ids.delete(null);
+  if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
+  computeColors(); S.lastIds = ids; watchPings(); renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+}
+/* online status: everyone with the page open is in the room; closing the tab leaves it */
+const PRES = { on: "çevrimiçi", away: "arka planda", off: "çevrimdışı" };
+S.online = {};
+async function startPresence() {
+  const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
+  if (!room) return voiceFallback();
+  S.room = room;
+  const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
+  push();
+  document.addEventListener("visibilitychange", push);
+  window.addEventListener("pagehide", () => markLastSeen(S.meId));
+  /* typing indicator: presence.typing is true while I type, cleared 3 s after the last key or on send */
+  let typingTimer = null, typingOn = false;
+  const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
+  $("chat-in").addEventListener("input", () => {
+    setTyping(!!$("chat-in").value.trim());
+    clearTimeout(typingTimer); typingTimer = setTimeout(() => setTyping(false), 3000);
+  });
+  $("f-chat").addEventListener("submit", () => { clearTimeout(typingTimer); setTyping(false); });
+  $("chat-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearTimeout(typingTimer); setTyping(false); } });
+  $("chat-in").addEventListener("blur", () => { clearTimeout(typingTimer); setTyping(false); });
+  room.onPeers(ch => {
+    const typing = new Set();
+    for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
+    S.typing = typing; renderTyping();
+    for (const p of ch.left)
+      if (p.kind === "viewer" && p.by && p.by !== S.meId && !ch.peers.some(q => q.by === p.by)) markLastSeen(p.by);
+    const on = {};
+    for (const p of ch.peers) if (p.kind === "viewer" && p.by) {
+      const vis = !p.presence || p.presence.visible !== false;
+      on[p.by] = on[p.by] === "on" || vis ? "on" : "away";
+    }
+    S.online = on;
+    renderPeople(S.lastIds || new Set());
+  }, () => {});
+  startVoiceCall(room);
+}
+/* live voice chat: WebRTC audio between everyone who joined, signalled over room topic "voice";
+   presence.voice marks who is in the call, and of each pair the lower peer label sends the offer */
+// Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
+function openVoicePage() {
+  window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
+  toast("Sesli sohbet yeni sekmede açılıyor");
+}
+/* room yoksa da 📞 görünsün: doğrudan GitHub sayfasını açar */
+function voiceFallback() {
+  $("vcall").hidden = false;
+  $("vc-join").textContent = "📞 Sesli sohbet başlat";
+  $("vc-join").addEventListener("click", openVoicePage);
+}
+function startVoiceCall(room) {
+  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return voiceFallback();
+  const V = { me: null, stream: null, muted: false, pcs: {}, pend: {} };
+  const box = $("vcall"); box.hidden = false;
+  const sig = (to, kind, extra) => room.emit("voice", Object.assign({ to, kind }, extra)).catch(() => {});
+  const close = peer => {
+    const pc = V.pcs[peer]; if (!pc) return;
+    delete V.pcs[peer]; delete V.pend[peer];
+    try { pc.close(); } catch (e) {}
+    const a = document.getElementById("vc-a-" + peer); if (a) a.remove();
+  };
+  const makePc = peer => {
+    if (V.pcs[peer]) return V.pcs[peer];
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    V.pcs[peer] = pc; V.pend[peer] = [];
+    V.stream.getTracks().forEach(t => pc.addTrack(t, V.stream));
+    pc.onicecandidate = e => { if (e.candidate) sig(peer, "ice", { cand: e.candidate.toJSON() }); };
+    pc.ontrack = e => {
+      let a = document.getElementById("vc-a-" + peer);
+      if (!a) { a = document.createElement("audio"); a.id = "vc-a-" + peer; a.autoplay = true; a.hidden = true; document.body.appendChild(a); }
+      a.srcObject = e.streams[0]; a.play().catch(() => {});
+    };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") close(peer); };
+    return pc;
+  };
+  const flush = async peer => {
+    const pc = V.pcs[peer], q = V.pend[peer] || [];
+    V.pend[peer] = [];
+    for (const c of q) await pc.addIceCandidate(c).catch(() => {});
+  };
+  const callPeers = () => room.peers().filter(p => !p.sameTab && p.presence && p.presence.voice === true);
+  const sync = () => {
+    const mine = room.peers().find(p => p.sameTab); if (mine) V.me = mine.peer;
+    const inCall = callPeers();
+    if (V.stream && V.me) {
+      for (const p of inCall) if (!V.pcs[p.peer] && V.me < p.peer) {
+        const pc = makePc(p.peer);
+        pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => sig(p.peer, "offer", { sdp: pc.localDescription.sdp })).catch(() => close(p.peer));
+      }
+      for (const peer of Object.keys(V.pcs)) if (!inCall.some(p => p.peer === peer)) close(peer);
+    }
+    const who$ = $("vc-who"); who$.textContent = "";
+    const ids = [...new Set(inCall.filter(p => p.kind === "viewer" && p.by).map(p => p.by))];
+    if (V.stream) ids.unshift(S.meId);
+    if (ids.length) {
+      who$.append("Sesli sohbette: ");
+      ids.forEach((id, i) => {
+        if (i) who$.append(", ");
+        const muted = id === S.meId ? V.muted : inCall.some(p => p.by === id && p.presence.vm === true);
+        who$.append(h("span", { class: muted ? "" : "talk" }, who(id) + (muted ? " 🔇" : "")));
+      });
+    }
+    box.classList.toggle("on", !!V.stream);
+    $("vc-join").textContent = V.stream ? "📴 Ayrıl" : ids.length ? "📞 Sesli sohbete katıl" : "📞 Sesli sohbet başlat";
+    $("vc-mute").hidden = !V.stream;
+    $("vc-mute").textContent = V.muted ? "🔇" : "🎙️";
+    $("vc-mute").classList.toggle("muted", V.muted);
+  };
+  room.on("voice", async m => {
+    const d = m.data;
+    if (m.sameTab || !V.stream || !d || d.to !== V.me || typeof d.kind !== "string") return;
+    const from = m.peer;
+    try {
+      if (d.kind === "offer" && typeof d.sdp === "string") {
+        close(from);
+        const pc = makePc(from);
+        await pc.setRemoteDescription({ type: "offer", sdp: d.sdp });
+        await flush(from);
+        await pc.setLocalDescription(await pc.createAnswer());
+        sig(from, "answer", { sdp: pc.localDescription.sdp });
+      } else if (d.kind === "answer" && typeof d.sdp === "string" && V.pcs[from]) {
+        await V.pcs[from].setRemoteDescription({ type: "answer", sdp: d.sdp });
+        await flush(from);
+      } else if (d.kind === "ice" && d.cand && typeof d.cand === "object") {
+        const pc = V.pcs[from];
+        if (pc && pc.remoteDescription) await pc.addIceCandidate(d.cand).catch(() => {});
+        else (V.pend[from] = V.pend[from] || []).push(d.cand);
+      } else if (d.kind === "bye") close(from);
+    } catch (e) { close(from); }
+  }, () => {});
+  room.onPeers(sync, () => {});
+  const leave = () => {
+    if (!V.stream) return;
+    for (const peer of Object.keys(V.pcs)) { sig(peer, "bye"); close(peer); }
+    V.stream.getTracks().forEach(t => t.stop());
+    V.stream = null; V.muted = false;
+    room.presence({ voice: null, vm: null }).catch(() => {});
+    sync();
+  };
+  $("vc-join").addEventListener("click", async () => {
+    if (V.stream) return leave();
+    try {
+      V.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      return openVoicePage();
+    }
+    V.muted = false;
+    room.presence({ voice: true, vm: false }).catch(() => {});
+    sync();
+    toast("Sesli sohbete katıldın");
+  });
+  $("vc-mute").addEventListener("click", () => {
+    if (!V.stream) return;
+    V.muted = !V.muted;
+    V.stream.getAudioTracks().forEach(t => (t.enabled = !V.muted));
+    room.presence({ vm: V.muted }).catch(() => {});
+    sync();
+  });
+  window.addEventListener("pagehide", leave);
+}
+/* last time someone was online: written when their tab hides or closes, and by whoever sees them leave */
+S.lastSeenOnline = {};
+function markLastSeen(id) { if (S.db && id) S.db.doc("lastseen/" + id).set({ at: Date.now() }).catch(() => {}); }
+function presLabel(id, st) {
+  const at = S.lastSeenOnline[id];
+  return PRES[st] + (st === "off" && at ? " · son görülme " + ago(at) : "");
+}
+setInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
+S.typing = new Set();
+function renderTyping() {
+  const box = $("typing"), ids = [...S.typing];
+  box.hidden = !ids.length;
+  box.replaceChildren();
+  if (!ids.length) return;
+  ids.forEach((id, i) => { if (i) box.append(", "); box.append(nameEl(id)); });
+  box.append(" yazıyor", h("span", { class: "tdots", "aria-hidden": "true" }, h("i"), h("i"), h("i")));
+}
+function renderOnlineLine() {
+  const box = $("chat-online"); if (!box) return;
+  box.replaceChildren();
+  if (!S.room) return;
+  for (const id of S.lastIds || []) if (id !== S.meId) {
+    const st = S.online[id] || "off";
+    box.append(h("span", { class: "pst2 " + st }, h("span", { class: "pdot inl " + st }), who(id) + " " + presLabel(id, st)));
+  }
+}
+function renderPeople(ids) {
+  renderOnlineLine();
+  const box = $("people"); box.replaceChildren();
+  for (const id of ids) {
+    const st = id === S.meId ? "on" : S.room ? (S.online[id] || "off") : null;
+    const chip = h("span", { class: "ppl", title: who(id) + (st ? " · " + PRES[st] : "") },
+      h("span", { class: "avwrap" }, avatar(id), st ? h("span", { class: "pdot " + st }) : null), nameEl(id),
+      st && id !== S.meId ? h("span", { class: "pst2 " + st }, presLabel(id, st)) : null);
+    if (id !== S.meId && S.canWrite && S.meId) {
+      const out = S.pingOut[id];
+      const st = out && out.from === S.meId ? (out.seenAt && out.seenAt >= out.at ? "gördü ✓" : "bekliyor…") : "";
+      chip.append(h("button", { class: "pingbtn", type: "button", title: "Dürt: sesli uyarı gider", onclick: () => sendPing(id) }, "Dürt"),
+        st ? h("span", { class: "pst" }, st) : null);
+    }
+    box.append(chip);
+  }
+  renderTotals();
+}
+function renderCards() {
+  const f = S.f;
+  const list = S.notes.filter(n =>
+    (f.kind === "all" || n.kind === f.kind) &&
+    inView(n) &&
+    (!f.fresh || isFresh(n)) &&
+    (S.view === "done" || f.status === "all" || (f.status === "working" ? workers(n).length > 0 : n.status === f.status)) &&
+    mediaOk(n, f.media) &&
+    (f.who === "all" || (f.who === "me") === (n.author === S.meId)) &&
+    (!f.q || ((n.title || "") + " " + (n.body || "")).toLocaleLowerCase("tr").includes(f.q))
+  ).sort((a, b) => byPin(a, b) || byStar(a, b));
+  const viewAll = S.notes.filter(inView);
+  const doneAll = S.notes.filter(n => n.status === "bitti");
+  $("count").textContent = list.length + " / " + viewAll.length + " not";
+  $("fresh-clear").hidden = !f.fresh;
+  const starAll = S.notes.filter(n => n.status !== "bitti" && n.starred).length;
+  $("n-active").textContent = S.notes.length - doneAll.length - starAll;
+  $("n-star").textContent = starAll;
+  $("n-done").textContent = doneAll.length;
+  $("tab-active").setAttribute("aria-selected", String(S.view === "active"));
+  $("tab-star").setAttribute("aria-selected", String(S.view === "star"));
+  $("tab-done").setAttribute("aria-selected", String(S.view === "done"));
+  $("tab-chat").setAttribute("aria-selected", String(S.view === "chat"));
+  $("tab-ai").setAttribute("aria-selected", String(S.view === "ai"));
+  $("tab-upd").setAttribute("aria-selected", String(S.view === "upd"));
+  const sum = $("donesum"); sum.replaceChildren();
+  sum.hidden = S.view !== "done" || !doneAll.length;
+  if (!sum.hidden) {
+    sum.append(h("span", { class: "label" }, "Bitirdikleriniz"));
+    for (const [k, t] of KINDS) {
+      const c = doneAll.filter(n => n.kind === k).length;
+      if (c) sum.append(h("span", { class: "tag", style: kindVars(k) }, KICON[k] + " " + c + " " + t));
+    }
+  }
+  const box = $("cards"); box.replaceChildren();
+  if (S.notes.length && !viewAll.length) {
+    box.append(S.view === "done"
+      ? h("div", { class: "empty" }, h("strong", {}, "Henüz biten bir şey yok"), "Bir notu açıp ✓ Bitti dediğinizde buraya taşınır ve çalışma masasından kalkar.")
+      : S.view === "star"
+      ? h("div", { class: "empty" }, h("strong", {}, "Henüz yıldızlı görev yok"), "Çalışma masasındaki bir notun ☆ düğmesine bastığında buraya taşınır; yıldızı kaldırınca masaya geri döner.")
+      : h("div", { class: "empty" }, h("strong", {}, "Masa tertemiz"), "Her şey bitmiş ya da yıldızlı. Yıldızlıları ★ Yıldızlılar, bitenleri ✓ Bitenler sekmesinde bulabilir ya da yeni bir not ekleyebilirsin."));
+    return;
+  }
+  if (!S.notes.length) {
+    box.append(h("div", { class: "empty" }, h("strong", {}, "Atölye boş"),
+      "Soldaki kutudan ilk notu ekle: bir oyun fikri, bir mekanik ya da yapılacak bir iş. Arkadaşın girdiğinde hepsini görecek."));
+    return;
+  }
+  if (!list.length) { box.append(h("div", { class: "empty" }, h("strong", {}, "Eşleşen not yok"), "Filtreleri ya da aramayı değiştir.")); return; }
+  for (const n of list) {
+    const rc = (n.replies || []).length;
+    box.append(h("div", {
+      role: "button", tabindex: "0", class: "card" + (n.status === "bitti" ? " done" : "") + (n.starred ? " starred" : "") + (n.pinned ? " pinned" : ""), style: kindVars(n.kind) + ";--uc:" + ucol(n.author),
+      onclick: () => openSheet(n.id),
+      onkeydown: e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openSheet(n.id); } }
+    },
+      isUnseenNew(n) && h("span", { class: "reddot", title: "Yeni paylaşıldı, henüz açmadın", "aria-label": "Yeni not" }),
+      isFresh(n) && h("span", { class: "newdot" }, "yeni"),
+      n.pinned && h("span", { class: "pin-badge", title: "Sabitlenmiş" }, "📌"),
+      h("div", { class: "meta" }, h("span", { class: "tag" }, (KICON[n.kind] || "") + " " + (KIND[n.kind] || n.kind)),
+        n.status !== "acik" && h("span", { class: "status " + n.status },
+          n.status === "bitti" ? "✓ Bitti · " + ago(n.doneAt || n.updatedAt) : STATUS_N[n.status]), starBtn(n), pinBtn(n)),
+      workBanner(n),
+      h("h3", {}, n.title),
+      cardMedia(n),
+      n.body && h("div", { class: "body" }, n.body),
+      links(n.body).length ? h("div", { class: "lnks" }, links(n.body).slice(0, 3).map(linkCard)) : null,
+      n.kind === "fikir" && voteBox(n),
+      h("div", { class: "meta" }, h("span", { class: "by" }, avatar(n.author, "sm"), nameEl(n.author)), h("span", {}, ago(n.createdAt)), workBtn(n), finishBtn(n)),
+      rc ? h("div", { class: "card-replies" },
+        rc > 3 && h("div", { class: "more" }, "+" + (rc - 3) + " önceki yanıt"),
+        n.replies.slice(-3).map(r => h("div", { class: "cr" }, avatar(r.a, "sm"),
+          h("div", { style: "--uc:" + ucol(r.a) }, h("span", { class: "crw" }, nameEl(r.a), " · " + ago(r.at)), h("div", { class: "crt" }, linkify(r.t)), n.kind === "fikir" ? replyVotes(n, r, true) : null)))
+      ) : null
+    ));
+  }
+}
+/* ---------- links ---------- */
+const URL_RE = /https?:\/\/[^\s<>"']+/g;
+const links = text => [...new Set((text || "").match(URL_RE) || [])];
+function linkCard(u) {
+  let host;
+  try { host = new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return null; }
+  const yt = /(^|\.)youtube\.com$|^youtu\.be$/.test(host);
+  return h("a", { class: "lnk" + (yt ? " yt" : ""), href: u, target: "_blank", rel: "noopener noreferrer",
+    title: "Yeni sekmede aç", onclick: e => e.stopPropagation() },
+    h("span", { class: "lk" }, yt ? "▶ YouTube" : "↗ " + host), h("span", { class: "lu" }, u));
+}
+function linkify(text) {
+  const out = []; let last = 0;
+  for (const m of (text || "").matchAll(URL_RE)) {
+    out.push(text.slice(last, m.index));
+    out.push(h("a", { href: m[0], target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation() }, m[0]));
+    last = m.index + m[0].length;
+  }
+  out.push((text || "").slice(last));
+  return out;
+}
+
+/* ---------- who is working on what ---------- */
+const workers = n => Object.entries(n.working || {}).filter(([, v]) => v).sort((a, b) => a[1].at - b[1].at).map(([id, v]) => ({ id, at: v.at }));
+/* someone else claimed it and I haven't joined: I may not close or delete it */
+function lockedFor(n) {
+  const ws = workers(n);
+  return ws.length && !ws.some(w => w.id === S.meId) ? ws : null;
+}
+function lockMsg(n, del) {
+  const names = workers(n).map(w => who(w.id)).join(" ve ");
+  return names + " bu konuyla ilgileniyor. " + (del ? "Silmek" : "Bitirmek") + " için önce “Ben ilgileniyorum” de ya da " + names + " bitirsin.";
+}
+function workBanner(n) {
+  const ws = workers(n);
+  if (!ws.length || n.status === "bitti") return null;
+  return h("div", { class: "working" }, h("span", { class: "wico", "aria-hidden": "true" }, "⚒"),
+    h("div", { class: "wl" }, ws.map(w => h("span", { class: "wp" }, avatar(w.id, "sm"), nameEl(w.id))),
+      h("span", { class: "ws" }, "ilgileniyor · " + ago(ws[0].at) + " başladı")));
+}
+function workBtn(n) {
+  if (!S.canWrite || !S.meId || n.status === "bitti") return null;
+  const mine = !!(n.working || {})[S.meId];
+  return h("button", { type: "button", class: "wb" + (mine ? " on" : ""), "aria-pressed": String(mine),
+    onclick: e => { e.stopPropagation(); toggleWork(n); } }, mine ? "⚒ İlgileniyorsun · bırak" : "⚒ Ben ilgileniyorum");
+}
+/* one-click finish straight from the card (same rules as the sheet's ✓ Bitti) */
+function finishBtn(n) {
+  if (!S.canWrite || !S.meId || n.status === "bitti" || lockedFor(n)) return null;
+  return h("button", { type: "button", class: "wb fin", title: "Notu bitti olarak işaretle",
+    onclick: e => { e.stopPropagation(); finishNote(n.id); } }, "✓ Bitir");
+}
+async function finishNote(id) {
+  const cur = S.notes.find(x => x.id === id); if (!cur || cur.status === "bitti") return;
+  if (lockedFor(cur)) { toast(lockMsg(cur)); return; }
+  const at = Date.now();
+  if (await write(() => S.db.doc("notes/" + id).update({ status: "bitti", doneAt: at, updatedAt: at, updatedBy: S.meId })))
+    toast("Bitti! Not, Bitenler paneline taşındı");
+}
+async function toggleWork(n) {
+  const mine = !!(n.working || {})[S.meId], at = Date.now();
+  const patch = { working: { [S.meId]: mine ? null : { at } } };
+  if (!mine && n.status === "acik") patch.status = "suruyor";
+  if (await write(() => S.db.doc("notes/" + n.id).update(patch)))
+    toast(mine ? "Artık bu konuyla ilgilenmiyorsun" : "Herkes bu konuyla ilgilendiğini görüyor");
+}
+
+/* ---------- stars: shared by the whole team, anyone may star any note (not limited to the author) ---------- */
+const byStar = (a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
+function starBtn(n) {
+  const on = !!n.starred, can = !!(S.canWrite && S.meId);
+  return h("button", { type: "button", class: "star" + (on ? " on" : ""), "aria-pressed": String(on), disabled: !can,
+    "aria-label": on ? "Yıldızı kaldır" : "Yıldızla",
+    title: on ? "Yıldızlı" + (n.starred.by ? " · " + who(n.starred.by) + " yıldızladı" : "") + (can ? " · kaldırmak için tıkla" : "") : "Önemli: yıldızla, hep en başta dursun",
+    onclick: e => { e.stopPropagation(); toggleStar(n.id); } }, on ? "★" : "☆");
+}
+async function toggleStar(id) {
+  const cur = S.notes.find(x => x.id === id); if (!cur || !S.meId) return;
+  const on = !cur.starred;
+  if (await write(() => S.db.doc("notes/" + id).update({ starred: on ? { by: S.meId, at: Date.now() } : null })))
+    toast(on ? (cur.status === "bitti" ? "Yıldızlandı" : "Yıldızlandı, not ★ Yıldızlılar sekmesine taşındı") : (cur.status === "bitti" ? "Yıldız kaldırıldı" : "Yıldız kaldırıldı, not çalışma masasına döndü"));
+}
+
+/* ---------- pins: pinned notes sit at the very top (above starred) ---------- */
+const byPin = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.pinnedAt || 0) - (a.pinnedAt || 0);
+function pinBtn(n) {
+  const on = !!n.pinned, can = !!(S.canWrite && S.meId);
+  return h("button", { type: "button", class: "pin" + (on ? " on" : ""), "aria-pressed": String(on), disabled: !can,
+    "aria-label": on ? "Sabitlemeyi kaldır" : "Sabitle",
+    title: on ? "Sabitlenmiş" + (n.pinnedBy ? " · " + who(n.pinnedBy) + " sabitledi" : "") + (can ? " · kaldırmak için tıkla" : "") : "Önemli: sabitle, her zaman en üstte dursun",
+    onclick: e => { e.stopPropagation(); togglePin(n.id); } }, on ? "📌" : "📍");
+}
+async function togglePin(id) {
+  const cur = S.notes.find(x => x.id === id); if (!cur || !S.meId) return;
+  const on = !cur.pinned;
+  const patch = on ? { pinned: true, pinnedAt: Date.now(), pinnedBy: S.meId } : { pinned: null, pinnedAt: null, pinnedBy: null };
+  if (await write(() => S.db.doc("notes/" + id).update(patch)))
+    toast(on ? (cur.status === "bitti" ? "Sabitlendi" : "Sabitlendi, not en üstte duracak") : (cur.status === "bitti" ? "Sabitleme kaldırıldı" : "Sabitleme kaldırıldı, not normal sıraya döndü"));
+}
+
+/* ---------- idea voting ---------- */
+const vget = (n, id) => { const x = (n.votes || {})[id]; return x && x.v || null; };
+function voteBox(n) {
+  const people = [...new Set((S.colorOrder || []).concat(Object.keys(n.votes || {})))].filter(Boolean);
+  if (!people.length && S.meId) people.push(S.meId);
+  const yes = people.filter(id => vget(n, id) === "yes").length, no = people.filter(id => vget(n, id) === "no").length;
+  const [cls, text] = people.length && yes === people.length ? ["ok", "✓ Onaylandı"]
+    : people.length && no === people.length ? ["bad", "✕ Reddedildi"]
+    : yes && no ? ["mixed", "Görüş ayrılığı"]
+    : ["wait", "Oy bekleniyor"];
+  const mine = vget(n, S.meId);
+  const btns = S.canWrite && S.meId ? [
+    h("button", { type: "button", class: "vb yes" + (mine === "yes" ? " on" : ""), "aria-pressed": String(mine === "yes"),
+      onclick: () => vote(n.id, mine === "yes" ? null : "yes") }, "✓ Onayla"),
+    h("button", { type: "button", class: "vb no" + (mine === "no" ? " on" : ""), "aria-pressed": String(mine === "no"),
+      onclick: () => vote(n.id, mine === "no" ? null : "no") }, "✕ Reddet")
+  ] : [];
+  return h("div", { class: "votes", onclick: e => e.stopPropagation() },
+    h("div", { class: "vhead" }, h("span", { class: "verdict " + cls }, text), btns),
+    h("div", { class: "voters" }, people.map(id => {
+      const v = vget(n, id);
+      return h("span", { class: "voter " + (v || "wait") }, avatar(id, "sm"), nameEl(id),
+        h("span", { class: "vv" }, v === "yes" ? "✓ onayladı" : v === "no" ? "✕ reddetti" : "bekliyor"));
+    })));
+}
+const rkey = r => r.a + "_" + r.at;
+function replyVotes(n, r, compact) {
+  const ents = Object.entries(((n.rvotes || {})[rkey(r)]) || {}).filter(([, v]) => v);
+  const yesIds = ents.filter(([, v]) => v.v === "yes").map(([id]) => id);
+  const noIds = ents.filter(([, v]) => v.v === "no").map(([id]) => id);
+  const mineE = ents.find(([id]) => id === S.meId), mine = mineE ? mineE[1].v : null;
+  const can = !!(S.canWrite && S.meId);
+  const btn = (v, label, ids) => h("button", { type: "button", class: "rv " + v + (mine === v ? " on" : ""), disabled: !can,
+    "aria-pressed": String(mine === v), "aria-label": (v === "yes" ? "Onayla" : "Reddet") + ", " + ids.length + " oy",
+    title: ids.length ? ids.map(who).join(", ") : "Henüz kimse",
+    onclick: e => { e.stopPropagation(); voteReply(n.id, r, mine === v ? null : v); } }, label + " " + ids.length);
+  return h("div", { class: "rvotes", onclick: e => e.stopPropagation() },
+    btn("yes", "✓", yesIds), btn("no", "✕", noIds),
+    !compact && ents.length ? h("span", { class: "rvn" }, ents.map(([id, v]) => h("span", {}, nameEl(id), v.v === "yes" ? " onayladı" : " reddetti"))) : null);
+}
+async function voteReply(noteId, r, v) {
+  if (!S.meId) return;
+  const at = Date.now();
+  await write(() => S.db.doc("notes/" + noteId).update({ rvotes: { [rkey(r)]: { [S.meId]: v ? { v, at } : null } } }));
+}
+async function vote(id, v) {
+  if (!S.meId) return;
+  const at = Date.now();
+  if (await write(() => S.db.doc("notes/" + id).update({ votes: { [S.meId]: v ? { v, at } : null } })))
+    toast(v === "yes" ? "Onay verdin" : v === "no" ? "Reddettin" : "Oyunu geri aldın");
+}
+
+function renderEvents() {
+  const evs = [];
+  for (const n of S.notes) {
+    evs.push({ at: n.createdAt, by: n.author, text: "not ekledi: ", note: n });
+    if (n.updatedAt - n.createdAt > 2000 && !(n.replies || []).some(r => r.at === n.updatedAt))
+      evs.push({ at: n.updatedAt, by: n.updatedBy, text: "notu güncelledi: ", note: n });
+    for (const r of n.replies || []) evs.push({ at: r.at, by: r.a, text: "yanıt yazdı: ", note: n });
+    for (const [uid, val] of Object.entries(n.votes || {})) if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "onay verdi: " : "reddetti: ", note: n });
+    for (const w of workers(n)) evs.push({ at: w.at, by: w.id, text: "ilgilenmeye başladı: ", note: n });
+    if (n.starred && n.starred.at) evs.push({ at: n.starred.at, by: n.starred.by, text: "★ yıldızladı: ", note: n });
+    for (const m of Object.values(n.rvotes || {})) for (const [uid, val] of Object.entries(m || {}))
+      if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "bir yorumu onayladı: " : "bir yorumu reddetti: ", note: n });
+  }
+  evs.sort((a, b) => b.at - a.at);
+  const box = $("events"); box.replaceChildren();
+  if (!evs.length) { box.append(h("p", { class: "hint" }, "İkinizin eklediği, düzenlediği ve yanıtladığı her şey burada sırayla görünür.")); return; }
+  for (const e of evs.slice(0, 40)) box.append(h("div", {
+    class: "ev" + (S.prevSeen && e.at > S.prevSeen && e.by !== S.meId ? " fresh" : ""),
+    role: "button", tabindex: "0", onclick: () => openSheet(e.note.id),
+    onkeydown: ev => { if (ev.key === "Enter") openSheet(e.note.id); }
+  }, avatar(e.by, "sm"), h("div", {},
+    h("div", { class: "what" }, nameEl(e.by), " " + e.text, e.note.title),
+    h("div", { class: "when" }, ago(e.at)))));
+}
+
+/* ---------- detail sheet ---------- */
+function closeSheet() { S.openId = null; S.rEdit = null; S.rDel = null; $("sheet-root").replaceChildren(); }
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const lb = document.querySelector(".lightbox");
+  if (lb) lb.remove(); else if (S.openId) closeSheet();
+});
+
+function openSheet(id) {
+  const n = S.notes.find(x => x.id === id); if (!n) return;
+  S.openId = id;
+  markNoteSeen(id);
+  const ref = S.db.doc("notes/" + id);
+  const kindSel = h("select", { class: "field", id: "sh-kind" }, KINDS.map(([k, t]) => h("option", { value: k, selected: n.kind === k }, t)));
+  const statSel = h("select", { class: "field", id: "sh-status" }, STATUS.map(([k, t]) => h("option", { value: k, selected: n.status === k }, t)));
+  const titleIn = h("input", { class: "title-in", id: "sh-title", value: n.title, maxlength: "120", "aria-label": "Başlık" });
+  const bodyIn = h("textarea", { class: "field", id: "sh-body", rows: "8", "aria-label": "Not" });
+  bodyIn.value = n.body || "";
+  const saveErr = h("p", { class: "err" });
+  const delBox = h("div", {});
+  /* only the note's author may edit its content or delete it; others can still finish / reopen */
+  const own = n.author === S.meId;
+  if (!own) {
+    titleIn.readOnly = true; bodyIn.readOnly = true; kindSel.disabled = true; statSel.disabled = true;
+    titleIn.classList.add("ro"); bodyIn.classList.add("ro");
+  }
+
+  const save = async () => {
+    const cur = S.notes.find(x => x.id === id); if (!cur) return;
+    const patch = cur.author === S.meId
+      ? { title: titleIn.value.trim() || cur.title, body: bodyIn.value.trim(), kind: kindSel.value, status: statSel.value }
+      : { title: cur.title, body: cur.body || "", kind: cur.kind, status: statSel.value };
+    if (patch.title === cur.title && patch.body === (cur.body || "") && patch.kind === cur.kind && patch.status === cur.status) { toast("Değişiklik yok"); return; }
+    const finishing = patch.status === "bitti" && cur.status !== "bitti";
+    if (finishing && lockedFor(cur)) { statSel.value = cur.status; saveErr.textContent = lockMsg(cur); return; }
+    const reopening = cur.status === "bitti" && patch.status !== "bitti";
+    patch.updatedAt = Date.now(); patch.updatedBy = S.meId;
+    if (finishing) patch.doneAt = patch.updatedAt;
+    if (await write(() => ref.update(patch), saveErr)) {
+      if (finishing) { closeSheet(); toast("Bitti! Not, Bitenler paneline taşındı"); }
+      else if (reopening) { closeSheet(); toast(cur.starred ? "Not tekrar açıldı, ★ Yıldızlılar sekmesine döndü" : "Not tekrar çalışma masasına döndü"); }
+      else toast("Kaydedildi");
+    }
+  };
+  const askDelete = () => {
+    const curD = S.notes.find(x => x.id === id);
+    if (curD && curD.author !== S.meId) { saveErr.textContent = "Bu notu sadece yazan kişi silebilir."; return; }
+    if (curD && lockedFor(curD)) { saveErr.textContent = lockMsg(curD, true); return; }
+    delBox.replaceChildren(h("div", { class: "confirm" }, h("span", {}, "Bu not ve yanıtları silinsin mi?"),
+      h("button", { class: "btn danger", type: "button", onclick: async () => {
+        if (await write(() => ref.delete(), saveErr)) { closeSheet(); toast("Not silindi"); }
+      } }, "Evet, sil"),
+      h("button", { class: "btn ghost", type: "button", onclick: () => delBox.replaceChildren() }, "Vazgeç")));
+  };
+
+  const replyIn = h("textarea", { class: "field", id: "sh-reply", rows: "2", placeholder: "Yanıt yaz, Enter ile gönder…", style: "min-height:60px" });
+  const sendReply = async () => {
+    const t = replyIn.value.trim(); if (!t) return;
+    const cur = S.notes.find(x => x.id === id); if (!cur) return;
+    const at = Date.now();
+    const replies = (cur.replies || []).concat([{ a: S.meId, t, at }]);
+    if (await write(() => ref.update({ replies, updatedAt: at, updatedBy: S.meId }), saveErr)) replyIn.value = "";
+  };
+  replyIn.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendReply(); }
+  });
+  const addImgs = async e => {
+    const files = [...e.target.files]; e.target.value = "";
+    const got = await uploadMedia(files, saveErr); if (!got.images.length && !got.videos.length) return;
+    const cur = S.notes.find(x => x.id === id); if (!cur) return;
+    const at = Date.now();
+    if (await write(() => ref.update({ images: (cur.images || []).concat(got.images), videos: (cur.videos || []).concat(got.videos), updatedAt: at, updatedBy: S.meId }), saveErr)) toast("Eklendi");
+  };
+
+  const sheet = h("div", { class: "scrim", onclick: e => { if (e.target === e.currentTarget) closeSheet(); } },
+    h("div", { class: "sheet", role: "dialog", "aria-label": "Not ayrıntısı" },
+      h("div", { class: "sheet-head" }, h("span", { class: "label", id: "sh-meta" }), h("span", { id: "sh-star", style: "margin-left:auto;display:inline-flex" }), h("button", { class: "btn ghost", type: "button", onclick: closeSheet }, "Kapat")),
+      titleIn,
+      h("div", { class: "row2" },
+        h("label", {}, h("span", { class: "label" }, "Tür"), kindSel),
+        h("label", {}, h("span", { class: "label" }, "Durum"), statSel)),
+      h("div", { id: "sh-work", class: "actions" }),
+      h("div", { id: "sh-votes" }),
+      bodyIn,
+      h("div", { class: "lnks", id: "sh-links" }),
+      h("div", { class: "gallery", id: "sh-gallery" }),
+      S.assets && h("label", { class: "btn sm", for: "sh-file" }, "Görsel / video ekle",
+        h("input", { type: "file", id: "sh-file", accept: IMG_TYPES.concat(VID_TYPES).join(","), multiple: true, hidden: true, onchange: addImgs })),
+      h("div", { class: "actions" },
+        own && h("button", { class: "btn primary", type: "button", onclick: save }, "Değişiklikleri kaydet"),
+        n.status !== "bitti"
+          ? h("button", { class: "btn", type: "button", onclick: () => { statSel.value = "bitti"; save(); } }, "✓ Bitti")
+          : h("button", { class: "btn", type: "button", onclick: () => { statSel.value = "acik"; save(); } }, "Tekrar aç"),
+        own && h("button", { class: "btn ghost danger", type: "button", onclick: askDelete }, "Sil"),
+        !own && h("span", { class: "hint", style: "flex-basis:100%" }, "Bu notu " + who(n.author) + " yazdı; içeriğini sadece o düzenleyip silebilir. Sen yanıt yazabilir, yıldızlayabilir, bitirebilirsin."),
+        h("span", { class: "hint", id: "sh-changed" })),
+      saveErr, delBox,
+      h("span", { class: "label" }, "Konuşma"),
+      h("div", { class: "replies", id: "sh-replies" }),
+      replyIn,
+      h("div", { class: "actions" }, h("button", { class: "btn", type: "button", onclick: sendReply }, "Yanıtla"),
+        S.canWrite && (S.colorOrder || []).filter(x => x !== S.meId).map(pid =>
+          h("button", { class: "pingbtn", type: "button", onclick: () => sendPing(pid, id) }, "Bu not için dürt: " + who(pid))),
+        h("span", { class: "hint" }, "Enter gönderir · Shift + Enter yeni satır"))
+    ));
+  sheet.dataset.base = String(n.updatedAt);
+  $("sheet-root").replaceChildren(sheet);
+  renderSheetLive();
+  renderCards(); renderTotals();
+  titleIn.focus();
+}
+function renderSheetLive() {
+  if (!S.openId) return;
+  const n = S.notes.find(x => x.id === S.openId);
+  if (!n) { closeSheet(); toast("Bu not silindi"); return; }
+  const meta = $("sh-meta"); if (!meta) return;
+  meta.textContent = who(n.author) + " yazdı · " + ago(n.createdAt);
+  const shs = $("sh-star"); if (shs) shs.replaceChildren(starBtn(n));
+  const base = Number($("sheet-root").firstChild.dataset.base);
+  $("sh-changed").textContent = n.updatedAt > base && n.updatedBy !== S.meId
+    ? who(n.updatedBy) + " bu notu az önce değiştirdi. Kaydedersen senin hâlin geçerli olur." : "";
+  const lk = n.status !== "bitti" && lockedFor(n);
+  $("sh-work").replaceChildren(...[workBanner(n), workBtn(n),
+    lk ? h("span", { class: "hint", style: "flex-basis:100%" }, "Kilitli: bu notu sadece ilgilenen kişi bitirebilir ya da silebilir.") : null].filter(Boolean));
+  const bo = $("sh-status").querySelector('option[value="bitti"]');
+  if (bo) bo.disabled = !!lk;
+  $("sh-links").replaceChildren(...links(n.body).map(linkCard).filter(Boolean));
+  const vbx = $("sh-votes"); vbx.replaceChildren();
+  if (n.kind === "fikir") vbx.append(voteBox(n));
+  const gal = $("sh-gallery"); gal.replaceChildren();
+  const media = (n.images || []).map(x => ["images", x]).concat((n.videos || []).map(x => ["videos", x]));
+  for (const [field, mid] of media) {
+    const rm = S.canWrite && n.author === S.meId && h("button", { class: "btn ghost sm", type: "button" }, "Kaldır");
+    if (rm) rm.addEventListener("click", async () => {
+      if (rm.dataset.sure !== "1") { rm.dataset.sure = "1"; rm.textContent = "Emin misin? Tekrar tıkla"; return; }
+      const cur = S.notes.find(x => x.id === n.id); if (!cur) return;
+      const at = Date.now();
+      if (await write(() => S.db.doc("notes/" + n.id).update({ [field]: (cur[field] || []).filter(x => x !== mid), updatedAt: at, updatedBy: S.meId })))
+        if (S.assets) S.assets.delete(mid).catch(() => {});
+    });
+    const el = field === "images"
+      ? h("img", { src: imgUrl(mid), alt: "", loading: "lazy", onclick: () => lightbox(mid) })
+      : h("video", { src: imgUrl(mid), controls: true, preload: "metadata", playsinline: true });
+    gal.append(h("figure", { class: field === "videos" ? "vid" : null }, el, rm));
+  }
+  const box = $("sh-replies"); box.replaceChildren();
+  const rs = n.replies || [];
+  if (!rs.length) box.append(h("p", { class: "hint", style: "margin:0" }, "Henüz yanıt yok. Fikrini aşağıya yaz."));
+  const hadFocus = document.activeElement && document.activeElement.id === "sh-redit";
+  for (const r of rs) box.append(h("div", { class: "reply", style: "--uc:" + ucol(r.a) }, avatar(r.a),
+    h("div", {}, h("div", { class: "who" }, nameEl(r.a), " · " + ago(r.at), r.ed ? h("span", { class: "mt" }, " · düzenlendi") : null, replyOwn(n, r)),
+      replyBody(n, r), n.kind === "fikir" ? replyVotes(n, r, false) : null)));
+  if (hadFocus && $("sh-redit")) $("sh-redit").focus();
+}
+function replyOwn(n, r) {
+  if (!S.canWrite || !S.meId || r.a !== S.meId) return null;
+  const k = rkey(r);
+  if ((S.rEdit && S.rEdit.key === k) || S.rDel === k) return null;
+  return h("span", { class: "own" },
+    h("button", { type: "button", onclick: () => { S.rEdit = { noteId: n.id, key: k, t: r.t }; S.rDel = null; renderSheetLive(); if ($("sh-redit")) $("sh-redit").focus(); } }, "düzenle"),
+    h("button", { type: "button", class: "del", onclick: () => { S.rDel = k; S.rEdit = null; renderSheetLive(); } }, "sil"));
+}
+function replyBody(n, r) {
+  const k = rkey(r), mine = r.a === S.meId;
+  if (mine && S.rEdit && S.rEdit.key === k && S.rEdit.noteId === n.id) {
+    const ta = h("textarea", { class: "field", id: "sh-redit", rows: "2", style: "min-height:60px", "aria-label": "Yanıtı düzenle" });
+    ta.value = S.rEdit.t;
+    ta.addEventListener("input", () => { if (S.rEdit) S.rEdit.t = ta.value; });
+    ta.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); S.rEdit = null; renderSheetLive(); } });
+    return h("div", {}, ta, h("div", { class: "actions", style: "margin-top:6px" },
+      h("button", { class: "btn primary sm", type: "button", onclick: () => saveReplyEdit(n.id, k) }, "Kaydet"),
+      h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.rEdit = null; renderSheetLive(); } }, "Vazgeç")));
+  }
+  if (mine && S.rDel === k) return h("div", {}, h("div", { class: "bubble" }, linkify(r.t)),
+    h("div", { class: "confirm" }, h("span", {}, "Bu yanıt silinsin mi?"),
+      h("button", { class: "btn danger sm", type: "button", onclick: () => deleteReply(n.id, k) }, "Evet, sil"),
+      h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.rDel = null; renderSheetLive(); } }, "Vazgeç")));
+  return h("div", { class: "bubble" }, linkify(r.t));
+}
+async function saveReplyEdit(id, k) {
+  const t = ((S.rEdit && S.rEdit.t) || "").trim(); if (!t) { toast("Yanıt boş olamaz; silmek istersen \"sil\"i kullan"); return; }
+  const cur = S.notes.find(x => x.id === id); if (!cur) return;
+  const r0 = (cur.replies || []).find(x => rkey(x) === k);
+  if (!r0 || r0.a !== S.meId) { S.rEdit = null; renderSheetLive(); return; }
+  const at = Date.now();
+  const replies = cur.replies.map(x => rkey(x) === k ? Object.assign({}, x, { t, ed: at }) : x);
+  if (await write(() => S.db.doc("notes/" + id).update({ replies, updatedAt: at, updatedBy: S.meId }))) { S.rEdit = null; renderSheetLive(); toast("Yanıt güncellendi"); }
+}
+async function deleteReply(id, k) {
+  const cur = S.notes.find(x => x.id === id); if (!cur) return;
+  const r0 = (cur.replies || []).find(x => rkey(x) === k);
+  if (!r0 || r0.a !== S.meId) { S.rDel = null; renderSheetLive(); return; }
+  const at = Date.now();
+  if (await write(() => S.db.doc("notes/" + id).update({ replies: cur.replies.filter(x => rkey(x) !== k), updatedAt: at, updatedBy: S.meId }))) { S.rDel = null; renderSheetLive(); toast("Yanıt silindi"); }
+}
+
+renderNewKinds();
+boot();
