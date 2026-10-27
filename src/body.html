@@ -8,7 +8,7 @@
 <section id="s-noaccess" class="gate" hidden>
   <div class="gate-card">
     <h1>Atölyeye ulaşılamıyor</h1>
-    <p>Bu sayfa notları claude.ai üzerinde saklar. Görmek için claude.ai hesabınla giriş yapmış olman ve sayfanın sahibinin seni davet etmiş olması gerekiyor.</p>
+    <p>Bu sayfa yerel modda çalışıyor. Veriler tarayıcınızda saklanır.</p>p>
   </div>
 </section>
 
@@ -91,6 +91,11 @@
             <span class="label">Bildirim seslerini dinle</span>
             <div class="kinds" id="snd-list"></div>
           </div>
+          <form id="f-publish" style="display:grid;gap:8px">
+            <span class="label">Artifact'ı güncelle</span>
+            <p class="hint">Yerel geliştirme için: <code>node build.js</code> → <code>dist/index.html</code> oluşur.</p>
+            <button class="btn" type="button" id="btn-publish" onclick="publishArtifact()">Artifact'ı Güncelle</button>
+          </form>
           <button class="btn danger" id="btn-lock">Kilitle ve çık</button>
         </div>
       </div>

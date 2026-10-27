@@ -3,10 +3,8 @@
 Ortak proje platformumuz. Projelerimizi bu repoda geliştiriyoruz.
 
 İki kişilik ekibin oyun fikirlerini, notlarını, sohbetini ve build'lerini paylaştığı tek sayfalık uygulama.
-claude.ai'de Artifact olarak yayınlanır: https://claude.ai/artifact/2Nu6jwwvTJm4daV6HsrwyD
 
-> Not: Sayfa claude.ai Artifact çalışma ortamını (paylaşılan veritabanı, dosya deposu vb.) kullanır;
-> `dist/index.html` doğrudan tarayıcıda açıldığında bu özellikler çalışmaz.
+> **Not:** Uygulama tek başına çalışan HTML/JS olarak çalışır. Veriler tarayıcıda `localStorage` ile saklanır.
 
 `main` dalı = yayındaki sürüm. Proje yapısı, veritabanı alanları ve kurallar için **[CLAUDE.md](CLAUDE.md)**'ye bak.
 
@@ -37,8 +35,7 @@ Sadece denetim için: `node build.js --check` (veya `npm run check`).
 1. Değişiklik PR ile `main`'e birleşmiş olmalı.
 2. `main`'i çek, `node build.js` çalıştır.
 3. [CHECKLIST.md](CHECKLIST.md)'deki kontrolleri yap.
-4. Claude Code'a "dist/index.html'i https://claude.ai/artifact/2Nu6jwwvTJm4daV6HsrwyD adresine yayınla" de.
-   Adres verilmezse yeni bir sayfa oluşur ve ekip eski sayfada kalır.
+4. `dist/index.html` dosyasını istediğiniz statik sunucuya (GitHub Pages, Netlify, Vercel, vb.) yükleyin.
 
 ## Çalışma düzeni: branch + PR
 

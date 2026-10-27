@@ -18,18 +18,15 @@ const PRECONNECT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
 const read = f => fs.readFileSync(path.join(SRC, f), "utf8").replace(/\r\n/g, "\n").replace(/^\uFEFF/, "");
 
-const isDev = process.argv.includes("--dev");
-
 function assemble() {
   const parts = [
     read("head.html"),
     "<style>\n", read("styles.css"), "</style>\n",
     read("body.html"),
+    "<script>\n", read("mock.js"), "</script>\n",
+    "<script>\n", read("app.js"), "</script>\n",
+    "\n</body></html>",
   ];
-  if (isDev) {
-    parts.push("<script>\n", read("mock.js"), "</script>\n");
-  }
-  parts.push("<script>\n", read("app.js"), "</script>\n", "\n</body></html>");
   return parts.join("").replace(/\n/g, EOL);
 }
 

@@ -102,7 +102,7 @@ function renderAvList() {
   const rawCur = (S.settings && S.settings.avatars && S.settings.avatars[S.meId]) || null;
   const cur = AV_ALIAS[rawCur] || rawCur;
   box.replaceChildren();
-  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "claude.ai fotoğrafım", src: null }]])) {
+  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "varsayılan fotoğraf", src: null }]])) {
     box.append(h("button", { type: "button", class: "chip avpick", "aria-pressed": String(cur === k),
       onclick: async () => { if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: k } }))) toast("Profil fotoğrafın güncellendi"); } },
       a.src ? h("img", { src: a.src, alt: "" }) : null, a.label));
@@ -567,7 +567,7 @@ async function addChatImages(files) {
   for (const f of others) {
     const type = fileType(f);
     if (!type) toast((f.name || "Dosya") + ": bu tür yüklenemiyor. Görsel, PDF, MP4/WEBM, TXT, MD, CSV ve JSON destekleniyor.");
-    else if (f.size > 20 * 1024 * 1024) toast((f.name || "Dosya") + " 20 MB'tan büyük. claude.ai dosya başına en fazla 20 MB kabul ediyor.");
+    else if (f.size > 20 * 1024 * 1024) toast((f.name || "Dosya") + " 20 MB'tan büyük. Maksimum 20 MB dosya boyutu.");
     else {
       try { const r = await S.assets.upload(f, { type }); S.chatFiles.push({ id: r.id, name: String(f.name || "dosya").slice(0, 120), type, size: f.size }); }
       catch (e) { toast(assetErr(e)); }
@@ -1177,6 +1177,10 @@ $("f-pass").addEventListener("submit", async e => {
   else ls.set(LS_KEY, old || "");
 });
 $("btn-lock").addEventListener("click", () => { ls.del(LS_KEY); $("pop-settings").hidden = true; route(); });
+
+$("btn-publish").addEventListener("click", () => {
+  alert("Yerel build'i güncellemek için:\n1. 'dist/index.html' dosyasını oluştur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
+});
 
 /* ---------- images ---------- */
 const IMG_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];

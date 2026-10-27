@@ -1,11 +1,10 @@
 # Oyun Atölyesi — Claude için proje rehberi
 
 İki kişilik ekibin oyun fikirlerini, notlarını, sohbetini ve build'lerini paylaştığı tek sayfalık uygulama.
-claude.ai'de bir **Artifact** olarak yayınlanır ve Artifact çalışma ortamının veritabanı (`S.db`) ile
-resim/video deposunu (`S.assets`) kullanır. Sunucu, framework ya da npm bağımlılığı yoktur.
+Tek başına çalışan HTML/JS olarak çalışır. Veriler tarayıcıda `localStorage` ile saklanır.
 
-- Canlı sayfa: https://claude.ai/artifact/2Nu6jwwvTJm4daV6HsrwyD
 - Repo: `dukkanci/-oyun-atolyesi` — `main` = yayındaki sürüm.
+- Canlı demo (GitHub Pages): https://dukkanci.github.io/-oyun-atolyesi/efsane-proje/
 
 ## Dosya yapısı
 
@@ -31,12 +30,9 @@ Birleştirme sırası: `head.html` + `<style>` + `styles.css` + `</style>` + `bo
 Kaynaklar LF ile tutulur, çıktı CRLF yazılır (geçişteki canlı dosyayla bayt bayt aynı olsun diye).
 Denetim başarısız olursa build dosya yazmaz ve 1 ile çıkar.
 
-**Yayınlama:** `dist/index.html`'i Artifact aracıyla `url: https://claude.ai/artifact/2Nu6jwwvTJm4daV6HsrwyD`
-vererek yayınla (url verilmezse yeni bir sayfa oluşur ve ekip eski adreste kalır). Yayın sadece `main`'e
-birleştirilmiş koddan yapılır.
+**Yayınlama:** `dist/index.html`'i istediğiniz statik sunucuya (GitHub Pages, Netlify, Vercel, vb.) yükleyin.
 
-**Düzenleme:** Değişiklikler her zaman `src/` içinde yapılır, sonra build alınır. Eski `atolye.html` artık yok;
-"sayfayı değiştir" işleri (Claude'a iş ver kuyruğu dahil) de `src/` + build + yayın akışını kullanır.
+**Düzenleme:** Değişiklikler her zaman `src/` içinde yapılır, sonra build alınır.
 
 ## Kod düzeni (app.js)
 
