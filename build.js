@@ -12,9 +12,9 @@ const OUT = path.join(ROOT, "dist", "index.html");
 const EOL = "\r\n";
 
 // İzin verilen dış kaynaklar. Script'ler sadece bu CDN'lerden ve sabit sürümle yüklenebilir.
-const SCRIPT_HOSTS = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com", "cdn.tailwindcss.com", "code.jquery.com"];
+const SCRIPT_HOSTS = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com", "cdn.tailwindcss.com", "code.jquery.com", "www.gstatic.com", "www.gstatic.cn"];
 const STYLE_HOSTS = ["fonts.googleapis.com"];
-const PRECONNECT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
+const PRECONNECT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com", "www.gstatic.com"];
 
 const read = f => fs.readFileSync(path.join(SRC, f), "utf8").replace(/\r\n/g, "\n").replace(/^\uFEFF/, "");
 
@@ -23,7 +23,7 @@ function assemble() {
     read("head.html"),
     "<style>\n", read("styles.css"), "</style>\n",
     read("body.html"),
-    "<script>\n", read("mock.js"), "</script>\n",
+    "<script>\n", read("firebase.js"), "</script>\n",
     "<script>\n", read("app.js"), "</script>\n",
     "\n</body></html>",
   ];
