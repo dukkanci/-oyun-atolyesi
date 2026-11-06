@@ -51,6 +51,24 @@
       <p class="err" id="lk-err"></p>
       <button class="btn primary" type="submit">Giriş yap</button>
     </form>
+    <p class="hint" style="margin-top:12px">Davet kodunuz var mı? <button type="button" class="btn ghost" id="btn-invite-switch">Davet koduyla gir</button></p>
+  </div>
+</section>
+
+<!-- invite code entry -->
+<section id="s-invite" class="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
+    <span class="label">Oyun Atölyesi</span>
+    <h1>Davet kodu ile katıl</h1>
+    <p>Arkadaşından aldığın davet kodunu gir. Böylece atölyeye yazma izniyle gireceksin.</p>
+    <form id="f-invite">
+      <label class="label" for="inv-code">Davet kodu</label>
+      <input class="field" id="inv-code" required maxlength="24" placeholder="ör. ABCD-EFGH-1234" style="text-transform:uppercase">
+      <p class="err" id="inv-err"></p>
+      <button class="btn primary" type="submit">Katıl</button>
+    </form>
+    <p class="hint" style="margin-top:12px">Şifreniz mi var? <button type="button" class="btn ghost" id="btn-lock-switch">Şifreyle gir</button></p>
   </div>
 </section>
 
@@ -83,6 +101,15 @@
             <button class="btn" type="submit">Şifreyi değiştir</button>
             <span class="hint">Değişince arkadaşın yeni şifreyle tekrar giriş yapar.</span>
           </form>
+          <div id="invite-code-display" style="display:grid;gap:6px">
+            <span class="label">Davet linki (arkadaşına gönder, tıklayınca direkt girer)</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <code id="inv-link-value" style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--f-mono);font-size:13px;word-break:break-all"></code>
+              <button class="btn" type="button" id="btn-copy-invite" title="Kopyala">Kopyala</button>
+              <button class="btn" type="button" id="btn-regenerate-invite" title="Yeni davet linki oluştur">Yenile</button>
+            </div>
+            <span class="hint">Bu linkle arkadaşın yazma izniyle atölyeye direkt girer. Link değişirse eski link geçersiz olur.</span>
+          </div>
           <div style="display:grid;gap:6px">
             <span class="label">Profil fotoğrafın</span>
             <div class="kinds" id="av-list"></div>
