@@ -30,6 +30,13 @@ jobs:
       - name: Build
         run: node build.js
 
+      - name: Prepare subpath artifact
+        run: |
+          mkdir -p dist/efsane-proje
+          # Tüm dosyaları (index.html dahil) efsane-proje altına taşı
+          find dist -maxdepth 1 -type f -exec mv {} dist/efsane-proje/ \;
+          find dist -maxdepth 1 -type d ! -name 'dist' ! -name 'efsane-proje' -exec mv {} dist/efsane-proje/ \;
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
