@@ -23,7 +23,7 @@ function assemble() {
     read("head.html"),
     "<style>\n", read("styles.css"), "</style>\n",
     read("body.html"),
-    "<script>\n", read("firebase.js"), "</script>\n",
+    "<script>\n", read("supabase.js"), "</script>\n",
     "<script>\n", read("app.js"), "</script>\n",
     "\n</body></html>",
   ];
