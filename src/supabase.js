@@ -68,7 +68,11 @@
   function initSupabase() {
     return loadSupabaseSDK().then(function() {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+        db: { schema: 'public' },
+        global: { headers: { 'x-client-info': 'oyun-atolyesi' } },
+        // camelCase (JS) ↔ snake_case (DB) otomatik çeviri
+        camelCase: true
       });
       // signInAnonymously kontrolü + fallback
       var auth = supabaseClient.auth;
