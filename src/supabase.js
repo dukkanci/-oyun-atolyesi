@@ -281,18 +281,19 @@
   window.claude.use = function(name) {
     if (!supabaseClient) {
       if (!initPromise) initPromise = initSupabase();
-      return initPromise.then(function(ok) { return ok ? buildAPI() : null; });
+      return initPromise.then(function(ok) { return ok ? getService(name) : null; });
     }
-    return Promise.resolve(buildAPI());
+    return Promise.resolve(getService(name));
   };
 
-  function buildAPI() {
-    return {
-      db: { collection: createMockCollection, doc: function(path) { var parts = path.split('/'); return createMockDoc(parts[0], parts[1]); } },
-      user: createMockUser(),
-      assets: createMockAssets(),
-      room: createMockRoom()
-    };
+  function getService(name) {
+    switch (name) {
+      case 'db': return { collection: createMockCollection, doc: function(path) { var parts = path.split('/'); return createMockDoc(parts[0], parts[1]); } };
+      case 'user': return createMockUser();
+      case 'assets': return createMockAssets();
+      case 'room': return createMockRoom();
+      default: return null;
+    }
   }
 
   if (typeof window !== 'undefined') {
