@@ -1,4 +1,4 @@
-// Oyun Atölyesi — Supabase Wrapper (GitHub Pages uyumlu, hata toleranslı)
+// Oyun Atölyesi — Supabase Wrapper (GitHub Pages uyumlu, hata toleranslı, 503 retry)
 
 (function() {
   'use strict';
@@ -13,9 +13,23 @@
 
   var supabaseClient = null;
   var initPromise = null;
+  var realtimeChannels = {};
 
   function uuid() {
     return crypto.randomUUID();
+  }
+
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  function fetchWithRetry(url, options, retries, delay) {
+    return fetch(url, options).then(function(response) {
+      if (response.status === 503 && retries > 0) {
+        return sleep(delay).then(function() { return fetchWithRetry(url, options, retries - 1, delay * 2); });
+      }
+      return response;
+    });
   }
 
   function loadSupabaseSDK() {
@@ -58,7 +72,7 @@
       });
       // signInAnonymously kontrolü + fallback
       var auth = supabaseClient.auth;
-      var signInAnon = auth.signInAnonymously || auth.signInAnonymously || function() {
+      var signInAnon = auth.signInAnonymously || function() {
         return Promise.reject(new Error('Anonymous auth not supported'));
       };
       var authPromise = signInAnon.call(auth);
@@ -99,6 +113,15 @@
     return crypto.randomUUID();
   }
 
+  function withRetry(promiseFn, retries, delay) {
+    return promiseFn().catch(function(err) {
+      if (retries > 0 && (err.message.indexOf('503') !== -1 || err.message.indexOf('Service Unavailable') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
+        return sleep(delay).then(function() { return withRetry(promiseFn, retries - 1, delay * 2); });
+      }
+      throw err;
+    });
+  }
+
   function createMockCollection(tableName) {
     return {
       tableName: tableName,
@@ -114,7 +137,9 @@
         var docData = { id: id };
         for (var k in data) docData[k] = data[k];
         if (!docData.createdAt) docData.createdAt = new Date().toISOString();
-        return supabaseClient.from(this.tableName).insert(docData).then(function(r) { if (r.error) throw r.error; return { id: id }; });
+        return withRetry(function() {
+          return supabaseClient.from(this.tableName).insert(docData);
+        }.bind(this), 3, 500).then(function(r) { if (r.error) throw r.error; return { id: id }; });
       },
       onSnapshot: function(onNext, onError) {
         var self = this;
@@ -133,8 +158,13 @@
           });
         }
         runQuery();
-        var channel = supabaseClient.channel('realtime:' + self.tableName).on('postgres_changes', { event: '*', schema: 'public', table: self.tableName }, runQuery).subscribe();
-        return function() { supabaseClient.removeChannel(channel); };
+        var channelKey = 'realtime:' + self.tableName;
+        if (!realtimeChannels[channelKey]) {
+          var channel = supabaseClient.channel(channelKey).on('postgres_changes', { event: '*', schema: 'public', table: self.tableName }, runQuery);
+          channel.subscribe();
+          realtimeChannels[channelKey] = channel;
+        }
+        return function() { /* keep channel alive for other listeners */ };
       }
     };
   }
@@ -144,7 +174,9 @@
       tableName: tableName,
       id: id,
       get: function() {
-        return supabaseClient.from(tableName).select('*').eq('id', id).single().then(function(r) {
+        return withRetry(function() {
+          return supabaseClient.from(tableName).select('*').eq('id', id).single();
+        }, 3, 500).then(function(r) {
           if (r.error && r.error.code !== 'PGRST116') throw r.error;
           return { exists: !!r.data, data: function() { return r.data; }, id: id };
         });
@@ -152,21 +184,32 @@
       set: function(data) {
         var newData = { id: id };
         for (var k in data) newData[k] = data[k];
-        return supabaseClient.from(tableName).upsert(newData).then(function(r) { if (r.error) throw r.error; });
+        return withRetry(function() {
+          return supabaseClient.from(tableName).upsert(newData);
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       update: function(data) {
-        return supabaseClient.from(tableName).update(data).eq('id', id).then(function(r) { if (r.error) throw r.error; });
+        return withRetry(function() {
+          return supabaseClient.from(tableName).update(data).eq('id', id);
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       delete: function() {
-        return supabaseClient.from(tableName).delete().eq('id', id).then(function(r) { if (r.error) throw r.error; });
+        return withRetry(function() {
+          return supabaseClient.from(tableName).delete().eq('id', id);
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       onSnapshot: function(onNext, onError) {
-        var channel = supabaseClient.channel('realtime:' + tableName + ':' + id).on('postgres_changes', { event: '*', schema: 'public', table: tableName, filter: 'id=eq.' + id }, function(payload) {
-          if (payload.eventType === 'DELETE') onNext({ exists: false, data: function() { return null; }, id: id });
-          else onNext({ exists: true, data: function() { return payload.new; }, id: id });
-        }).subscribe();
+        var channelKey = 'realtime:' + tableName + ':' + id;
+        if (!realtimeChannels[channelKey]) {
+          var channel = supabaseClient.channel('realtime:' + tableName + ':' + id).on('postgres_changes', { event: '*', schema: 'public', table: tableName, filter: 'id=eq.' + id }, function(payload) {
+            if (payload.eventType === 'DELETE') onNext({ exists: false, data: function() { return null; }, id: id });
+            else onNext({ exists: true, data: function() { return payload.new; }, id: id });
+          });
+          channel.subscribe();
+          realtimeChannels[channelKey] = channel;
+        }
         supabaseClient.from(tableName).select('*').eq('id', id).single().then(onNext).catch(onError);
-        return function() { supabaseClient.removeChannel(channel); };
+        return function() { /* keep channel alive */ };
       }
     };
   }
@@ -221,22 +264,47 @@
 
   function createMockRoom() {
     var ROOM_NAME = 'default';
+    var presenceChannel = null;
+    var signalingChannel = null;
+
+    function getPresenceChannel() {
+      if (!presenceChannel) {
+        presenceChannel = supabaseClient.channel('room_presence:default');
+        presenceChannel.on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
+          // presence değiştiğinde dinleyiciler tetiklenir
+        });
+        presenceChannel.subscribe();
+      }
+      return presenceChannel;
+    }
+
+    function getSignalingChannel(userId) {
+      if (!signalingChannel) {
+        signalingChannel = supabaseClient.channel('room_signaling:default');
+        signalingChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + userId }, function(payload) {
+          // signaling mesajı geldi
+        });
+        signalingChannel.subscribe();
+      }
+      return signalingChannel;
+    }
+
     return {
       presence: function(data) {
         return supabaseClient.auth.getUser().then(function(r) {
           var user = r.data.user;
           if (!user) return;
           if (data) {
-            var d = { room: ROOM_NAME, user_id: user.id, updated_at: new Date().toISOString() };
+            var d = { room: 'default', user_id: user.id, updated_at: new Date().toISOString() };
             for (var k in data) d[k] = data[k];
-            return supabaseClient.from('room_presence').upsert(d);
+            return withRetry(function() { return supabaseClient.from('room_presence').upsert(d); }, 3, 500);
           } else {
-            return supabaseClient.from('room_presence').delete().eq('room', ROOM_NAME).eq('user_id', user.id);
+            return withRetry(function() { return supabaseClient.from('room_presence').delete().eq('room', 'default').eq('user_id', user.id); }, 3, 500);
           }
         });
       },
       peers: function() {
-        return supabaseClient.from('room_presence').select('user_id, *').eq('room', ROOM_NAME).then(function(r) {
+        return withRetry(function() { return supabaseClient.from('room_presence').select('user_id, *').eq('room', 'default'); }, 3, 500).then(function(r) {
           return supabaseClient.auth.getUser().then(function(me) {
             var myId = me.data.user ? me.data.user.id : null;
             return (r.data || []).map(function(d) { return { peer: d.user_id, by: d.user_id, presence: d, sameTab: d.user_id === myId }; });
@@ -244,23 +312,35 @@
         });
       },
       onPeers: function(cb) {
-        var channel = supabaseClient.channel('room_presence:default').on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
-          supabaseClient.from('room_presence').select('user_id, *').eq('room', ROOM_NAME).then(function(r) {
-            cb({ peers: r.data || [], left: [] });
+        // Kanalı bir kez oluştur, tekrar subscrible etme
+        if (!realtimeChannels['room_peers']) {
+          var channel = supabaseClient.channel('room_peers');
+          channel.on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
+            supabaseClient.from('room_presence').select('user_id, *').eq('room', 'default').then(function(r) {
+              cb({ peers: r.data || [], left: [] });
+            });
           });
-        }).subscribe();
-        return function() { supabaseClient.removeChannel(channel); };
+          channel.subscribe();
+          realtimeChannels['room_peers'] = channel;
+        }
+        return function() { /* keep alive */ };
       },
       on: function(event, cb) {
         if (event === 'voice') {
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return function() {};
-            var channel = supabaseClient.channel('room_signaling:default').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + me.id }, function(payload) {
-              cb({ peer: payload.new.from, data: payload.new.data, sameTab: false });
-              supabaseClient.from('room_signaling').delete().eq('id', payload.new.id).catch(function() {});
-            }).subscribe();
-            return function() { supabaseClient.removeChannel(channel); };
+            var channelKey = 'signaling:' + me.id;
+            if (!realtimeChannels[channelKey]) {
+              var channel = supabaseClient.channel('signaling:' + me.id);
+              channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + me.id }, function(payload) {
+                cb({ peer: payload.new.from, data: payload.new.data, sameTab: false });
+                supabaseClient.from('room_signaling').delete().eq('id', payload.new.id).catch(function() {});
+              });
+              channel.subscribe();
+              realtimeChannels[channelKey] = channel;
+            }
+            return function() { /* keep alive */ };
           });
         }
         return function() {};
@@ -270,7 +350,9 @@
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return;
-            return supabaseClient.from('room_signaling').insert({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
+            return withRetry(function() {
+              return supabaseClient.from('room_signaling').insert({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
+            }, 3, 500);
           });
         }
       }
