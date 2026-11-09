@@ -6,9 +6,9 @@
   var SUPABASE_URL = 'https://etwapxyqqelvexqzfrjw.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_bM2BVsg6nz2wW1BABCS8rw_0CuCF64L';
   var CDN_URLS = [
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js',
-    'https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js'
   ];
 
   var supabaseClient = null;
@@ -56,7 +56,12 @@
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
-      var authPromise = supabaseClient.auth.signInAnonymously();
+      // signInAnonymously kontrolü + fallback
+      var auth = supabaseClient.auth;
+      var signInAnon = auth.signInAnonymously || auth.signInAnonymously || function() {
+        return Promise.reject(new Error('Anonymous auth not supported'));
+      };
+      var authPromise = signInAnon.call(auth);
       var timeoutPromise = new Promise(function(_, reject) {
         setTimeout(function() { reject(new Error('Auth timeout (10s)')); }, 10000);
       });
@@ -88,6 +93,10 @@
     errDiv.style.cssText = 'position:fixed;top:10px;right:10px;background:#fee;padding:10px;border:1px solid #f88;border-radius:8px;max-width:400px;z-index:9999;font-family:monospace;font-size:12px;color:#c00';
     errDiv.innerHTML = '<b>Supabase bağlantı hatası:</b><br>' + message + '<br><br><small>Supabase Dashboard → Authentication → URL Configuration → Site URL ve Redirect URLs\'e <code>https://dukkanci.github.io/-oyun-atolyesi/efsane-proje/</code> ekleyin.</small>';
     document.body.appendChild(errDiv);
+  }
+
+  function uuid() {
+    return crypto.randomUUID();
   }
 
   function createMockCollection(tableName) {
@@ -235,7 +244,7 @@
         });
       },
       onPeers: function(cb) {
-        var channel = supabaseClient.channel('room_presence:' + ROOM_NAME).on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.' + ROOM_NAME }, function() {
+        var channel = supabaseClient.channel('room_presence:default').on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
           supabaseClient.from('room_presence').select('user_id, *').eq('room', ROOM_NAME).then(function(r) {
             cb({ peers: r.data || [], left: [] });
           });
@@ -247,7 +256,7 @@
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return function() {};
-            var channel = supabaseClient.channel('room_signaling:' + ROOM_NAME).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + me.id }, function(payload) {
+            var channel = supabaseClient.channel('room_signaling:default').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + me.id }, function(payload) {
               cb({ peer: payload.new.from, data: payload.new.data, sameTab: false });
               supabaseClient.from('room_signaling').delete().eq('id', payload.new.id).catch(function() {});
             }).subscribe();
@@ -261,7 +270,7 @@
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return;
-            return supabaseClient.from('room_signaling').insert({ room: ROOM_NAME, from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
+            return supabaseClient.from('room_signaling').insert({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
           });
         }
       }
