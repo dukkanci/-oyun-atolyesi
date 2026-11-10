@@ -118,12 +118,30 @@
   }
 
   function withRetry(promiseFn, retries, delay) {
-    return promiseFn().catch(function(err) {
-      if (retries > 0 && (err.message.indexOf('503') !== -1 || err.message.indexOf('Service Unavailable') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
+    try {
+      var result = promiseFn();
+      // Sonuç Promise mi kontrol et
+      if (!result || typeof result.then !== 'function' || typeof result.catch !== 'function') {
+        // Promise dönmediyse, Promise olarak wrap et
+        return Promise.resolve(result).then(function(val) {
+          return val;
+        }).catch(function(err) {
+          return handleRetry(err);
+        });
+      }
+      return result.catch(function(err) {
+        return handleRetry(err);
+      });
+    } catch (syncErr) {
+      return Promise.reject(syncErr);
+    }
+
+    function handleRetry(err) {
+      if (retries > 0 && err && err.message && (err.message.indexOf('503') !== -1 || err.message.indexOf('Service Unavailable') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
         return sleep(delay).then(function() { return withRetry(promiseFn, retries - 1, delay * 2); });
       }
       throw err;
-    });
+    }
   }
 
   function createMockCollection(tableName) {
