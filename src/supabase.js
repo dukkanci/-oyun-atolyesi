@@ -19,6 +19,18 @@
     return crypto.randomUUID();
   }
 
+  function toSnakeCase(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var result = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k)) continue;
+      var snakeKey = k.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); });
+      var val = obj[k];
+      result[snakeKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? toSnakeCase(val) : val;
+    }
+    return result;
+  }
+
   function sleep(ms) {
     return new Promise(function(resolve) { setTimeout(resolve, ms); });
   }
@@ -70,9 +82,7 @@
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
         db: { schema: 'public' },
-        global: { headers: { 'x-client-info': 'oyun-atolyesi' } },
-        // camelCase (JS) ↔ snake_case (DB) otomatik çeviri
-        camelCase: true
+        global: { headers: { 'x-client-info': 'oyun-atolyesi' } }
       });
       // signInAnonymously kontrolü + fallback
       var auth = supabaseClient.auth;
@@ -159,8 +169,9 @@
         var docData = { id: id };
         for (var k in data) docData[k] = data[k];
         if (!docData.createdAt) docData.createdAt = new Date().toISOString();
+        var snakeData = toSnakeCase(docData);
         return withRetry(function() {
-          return supabaseClient.from(this.tableName).insert(docData);
+          return supabaseClient.from(this.tableName).insert(snakeData);
         }.bind(this), 3, 500).then(function(r) { if (r.error) throw r.error; return { id: id }; });
       },
       onSnapshot: function(onNext, onError) {
@@ -206,13 +217,15 @@
       set: function(data) {
         var newData = { id: id };
         for (var k in data) newData[k] = data[k];
+        var snakeData = toSnakeCase(newData);
         return withRetry(function() {
-          return supabaseClient.from(tableName).upsert(newData);
+          return supabaseClient.from(tableName).upsert(snakeData, { returning: 'representation' });
         }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       update: function(data) {
+        var snakeData = toSnakeCase(data);
         return withRetry(function() {
-          return supabaseClient.from(tableName).update(data).eq('id', id);
+          return supabaseClient.from(tableName).update(snakeData).eq('id', id);
         }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       delete: function() {
@@ -266,7 +279,8 @@
         return supabaseClient.storage.from('assets').upload(id, file, { contentType: type, upsert: false }).then(function(r) {
           if (r.error) throw r.error;
           var publicUrlData = supabaseClient.storage.from('assets').getPublicUrl(id);
-          return supabaseClient.from('assets').upsert({ id: id, url: publicUrlData.data.publicUrl, type: type, size: file.size, name: file.name }).then(function() { return { id: id }; });
+          var snakeData = toSnakeCase({ id: id, url: publicUrlData.data.publicUrl, type: type, size: file.size, name: file.name });
+          return supabaseClient.from('assets').upsert(snakeData, { returning: 'representation' }).then(function() { return { id: id }; });
         });
       },
       delete: function(id) {
@@ -319,7 +333,8 @@
           if (data) {
             var d = { room: 'default', user_id: user.id, updated_at: new Date().toISOString() };
             for (var k in data) d[k] = data[k];
-            return withRetry(function() { return supabaseClient.from('room_presence').upsert(d); }, 3, 500);
+            var snakeData = toSnakeCase(d);
+            return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation' }); }, 3, 500);
           } else {
             return withRetry(function() { return supabaseClient.from('room_presence').delete().eq('room', 'default').eq('user_id', user.id); }, 3, 500);
           }
@@ -372,8 +387,9 @@
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return;
+            var snakeData = toSnakeCase({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
             return withRetry(function() {
-              return supabaseClient.from('room_signaling').insert({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
+              return supabaseClient.from('room_signaling').insert(snakeData);
             }, 3, 500);
           });
         }
