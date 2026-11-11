@@ -334,7 +334,7 @@
             var d = { room: 'default', user_id: user.id, updated_at: Date.now() };
             for (var k in data) d[k] = data[k];
             var snakeData = toSnakeCase(d);
-            return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation' }); }, 3, 500);
+            return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation', onConflict: 'room,user_id' }); }, 3, 500);
           } else {
             return withRetry(function() { return supabaseClient.from('room_presence').delete().eq('room', 'default').eq('user_id', user.id); }, 3, 500);
           }
