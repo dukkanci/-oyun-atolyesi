@@ -331,7 +331,7 @@
           var user = r.data.user;
           if (!user) return;
           if (data) {
-            var d = { room: 'default', user_id: user.id, updated_at: new Date().toISOString() };
+            var d = { room: 'default', user_id: user.id, updated_at: Date.now() };
             for (var k in data) d[k] = data[k];
             var snakeData = toSnakeCase(d);
             return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation' }); }, 3, 500);
@@ -387,7 +387,7 @@
           return supabaseClient.auth.getUser().then(function(r) {
             var me = r.data.user;
             if (!me) return;
-            var snakeData = toSnakeCase({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: new Date().toISOString() });
+            var snakeData = toSnakeCase({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: Date.now() });
             return withRetry(function() {
               return supabaseClient.from('room_signaling').insert(snakeData);
             }, 3, 500);
