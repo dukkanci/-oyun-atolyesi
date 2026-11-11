@@ -330,14 +330,11 @@
         return supabaseClient.auth.getUser().then(function(r) {
           var user = r.data.user;
           if (!user) return;
-          if (data) {
-            var d = { room: 'default', user_id: user.id, updated_at: Date.now() };
-            for (var k in data) d[k] = data[k];
-            var snakeData = toSnakeCase(d);
-            return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation', onConflict: 'room,user_id' }); }, 3, 500);
-          } else {
-            return withRetry(function() { return supabaseClient.from('room_presence').delete().eq('room', 'default').eq('user_id', user.id); }, 3, 500);
-          }
+          var d = { room: 'default', user_id: user.id, updated_at: Date.now() };
+          // room_presence tablosunda sadece room, user_id, updated_at kolonları var
+          // data parametresi (visible vb.) veritabanına yazılmamalı
+          var snakeData = toSnakeCase(d);
+          return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation', onConflict: 'room,user_id' }); }, 3, 500);
         });
       },
       peers: function() {
