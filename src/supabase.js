@@ -84,31 +84,10 @@
         db: { schema: 'public' },
         global: { headers: { 'x-client-info': 'oyun-atolyesi' } }
       });
-      // signInAnonymously kontrolü + fallback
-      var auth = supabaseClient.auth;
-      var signInAnon = auth.signInAnonymously || function() {
-        return Promise.reject(new Error('Anonymous auth not supported'));
-      };
-      var authPromise = signInAnon.call(auth);
-      var timeoutPromise = new Promise(function(_, reject) {
-        setTimeout(function() { reject(new Error('Auth timeout (10s)')); }, 10000);
-      });
-      return Promise.race([authPromise, timeoutPromise]).then(function(result) {
-        var error = result.error;
-        if (error) {
-          return supabaseClient.auth.getSession().then(function(sessionResult) {
-            if (!sessionResult.data.session) {
-              throw new Error('Oturum açılamadı: ' + error.message);
-            }
-          });
-        }
-        console.log('%c[Oyun Atölyesi] Supabase mod aktif (paylaşımlı, real-time)', 'color: #3ECF8E; font-weight: bold');
-        return true;
-      }).catch(function(e) {
-        console.error('[Oyun Atölyesi] Supabase başlatma hatası:', e);
-        showError(e.message);
-        return false;
-      });
+      // Email/password authentication - no auto sign-in
+      // Auth state is managed by the app via signUp/signInWithPassword/signOut
+      console.log('%c[Oyun Atölyesi] Supabase mod aktif (email/password auth, real-time)', 'color: #3ECF8E; font-weight: bold');
+      return true;
     }).catch(function(e) {
       console.error('[Oyun Atölyesi] Supabase SDK yükleme hatası:', e);
       showError(e.message);
@@ -251,6 +230,31 @@
 
   function createMockUser() {
     return {
+      // Kullanıcı kaydı (email/password)
+      signUp: function(email, password) {
+        return supabaseClient.auth.signUp({ email: email, password: password });
+      },
+      // Email/password ile giriş
+      signInWithPassword: function(email, password) {
+        return supabaseClient.auth.signInWithPassword({ email: email, password: password });
+      },
+      // Çıkış yap
+      signOut: function() {
+        return supabaseClient.auth.signOut();
+      },
+      // Mevcut kullanıcıyı getir
+      getUser: function() {
+        return supabaseClient.auth.getUser();
+      },
+      // Mevcut oturumu getir
+      getSession: function() {
+        return supabaseClient.auth.getSession();
+      },
+      // Auth state değişikliklerini dinle
+      onAuthStateChange: function(callback) {
+        return supabaseClient.auth.onAuthStateChange(callback);
+      },
+      // Mevcut kullanıcı bilgisi (me() - app.js uyumluluğu için)
       me: function() {
         return supabaseClient.auth.getUser().then(function(r) { return { id: r.data.user ? r.data.user.id : null }; });
       },
