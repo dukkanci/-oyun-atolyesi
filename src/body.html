@@ -12,22 +12,25 @@
   </div>
 </section>
 
-<!-- first-time setup -->
+<!-- first-time setup / registration -->
 <section id="s-setup" class="gate" hidden>
   <div class="gate-card">
     <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
     <h1>Atölyeyi kur</h1>
-    <p>Oyununuza bir çalışma adı verin ve ikinizin kullanacağı ekip şifresini belirleyin. Şifreyi arkadaşına sen söyleyeceksin.</p>
+    <p>Oyun adını gir ve hesap oluştur. Sonra arkadaşını davet et.</p>
     <form id="f-setup">
       <label class="label" for="su-game">Oyunun çalışma adı</label>
       <input class="field" id="su-game" required maxlength="60" placeholder="ör. Proje Fener">
-      <label class="label" for="su-pass">Ekip şifresi</label>
-      <input class="field" id="su-pass" type="password" required minlength="4" autocomplete="new-password">
+      <label class="label" for="su-email">E-posta</label>
+      <input class="field" id="su-email" type="email" required autocomplete="email" placeholder="sen@ornek.com">
+      <label class="label" for="su-pass">Şifre</label>
+      <input class="field" id="su-pass" type="password" required minlength="6" autocomplete="new-password">
       <label class="label" for="su-pass2">Şifre tekrar</label>
-      <input class="field" id="su-pass2" type="password" required minlength="4" autocomplete="new-password">
+      <input class="field" id="su-pass2" type="password" required minlength="6" autocomplete="new-password">
       <p class="err" id="su-err"></p>
-      <button class="btn primary" type="submit">Atölyeyi aç</button>
+      <button class="btn primary" type="submit">Hesap oluştur ve atölyeyi aç</button>
     </form>
+    <p class="hint" style="margin-top:12px">Zaten hesabın var mı? <button type="button" class="btn ghost" id="btn-setup-to-login">Giriş yap</button></p>
   </div>
 </section>
 
@@ -39,36 +42,32 @@
   </div>
 </section>
 
-<!-- lock -->
+<!-- lock / login -->
 <section id="s-lock" class="gate" hidden>
   <div class="gate-card">
     <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
     <span class="label">Oyun Atölyesi</span>
     <h1 id="lock-game">—</h1>
     <form id="f-lock">
-      <label class="label" for="lk-pass">Ekip şifresi</label>
+      <label class="label" for="lk-email">E-posta</label>
+      <input class="field" id="lk-email" type="email" required autocomplete="email" placeholder="sen@ornek.com">
+      <label class="label" for="lk-pass">Şifre</label>
       <input class="field" id="lk-pass" type="password" required autocomplete="current-password">
       <p class="err" id="lk-err"></p>
       <button class="btn primary" type="submit">Giriş yap</button>
     </form>
-    <p class="hint" style="margin-top:12px">Davet kodunuz var mı? <button type="button" class="btn ghost" id="btn-invite-switch">Davet koduyla gir</button></p>
+    <p class="hint" style="margin-top:12px">Hesabın yok mu? <button type="button" class="btn ghost" id="btn-lock-to-setup">Kayıt ol</button></p>
   </div>
 </section>
 
-<!-- invite code entry -->
+<!-- invite link entry -->
 <section id="s-invite" class="gate" hidden>
   <div class="gate-card">
     <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
     <span class="label">Oyun Atölyesi</span>
-    <h1>Davet kodu ile katıl</h1>
-    <p>Arkadaşından aldığın davet kodunu gir. Böylece atölyeye yazma izniyle gireceksin.</p>
-    <form id="f-invite">
-      <label class="label" for="inv-code">Davet kodu</label>
-      <input class="field" id="inv-code" required maxlength="24" placeholder="ör. ABCD-EFGH-1234" style="text-transform:uppercase">
-      <p class="err" id="inv-err"></p>
-      <button class="btn primary" type="submit">Katıl</button>
-    </form>
-    <p class="hint" style="margin-top:12px">Şifreniz mi var? <button type="button" class="btn ghost" id="btn-lock-switch">Şifreyle gir</button></p>
+    <h1>Davet linki ile katıl</h1>
+    <p>Arkadaşının gönderdiği davet linkine tıkladın. Hesabın varsa giriş yap, yoksa kayıt ol.</p>
+    <p class="hint" style="margin-top:12px"><button type="button" class="btn primary" id="btn-invite-to-login">Giriş yap</button> <button type="button" class="btn ghost" id="btn-invite-to-setup">Kayıt ol</button></p>
   </div>
 </section>
 
@@ -95,24 +94,21 @@
             <input class="field" id="st-game" maxlength="60" required>
             <button class="btn" type="submit">Adı kaydet</button>
           </form>
-          <form id="f-pass" style="display:grid;gap:8px">
-            <label class="label" for="st-pass">Yeni ekip şifresi</label>
-            <input class="field" id="st-pass" type="password" minlength="4" required autocomplete="new-password">
-            <button class="btn" type="submit">Şifreyi değiştir</button>
-            <span class="hint">Değişince arkadaşın yeni şifreyle tekrar giriş yapar.</span>
-          </form>
-          <div id="invite-code-display" style="display:grid;gap:6px">
-            <span class="label">Davet linki (arkadaşına gönder, tıklayınca direkt girer)</span>
+          <div style="display:grid;gap:6px">
+            <span class="label">Proje linki (arkadaşına gönder)</span>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <code id="inv-link-value" style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--f-mono);font-size:13px;word-break:break-all"></code>
               <button class="btn" type="button" id="btn-copy-invite" title="Kopyala">Kopyala</button>
-              <button class="btn" type="button" id="btn-regenerate-invite" title="Yeni davet linki oluştur">Yenile</button>
             </div>
-            <span class="hint">Bu linkle arkadaşın yazma izniyle atölyeye direkt girer. Link değişirse eski link geçersiz olur.</span>
+            <span class="hint">Bu linki arkadaşına gönder. O giriş yapıp / kayıp olunca atölyeye girecek.</span>
           </div>
           <div style="display:grid;gap:6px">
             <span class="label">Profil fotoğrafın</span>
             <div class="kinds" id="av-list"></div>
+          </div>
+          <div style="display:grid;gap:6px">
+            <span class="label">Hesap</span>
+            <button class="btn danger" id="btn-logout" type="button">Çıkış yap</button>
           </div>
           <div style="display:grid;gap:6px">
             <span class="label">Bildirim seslerini dinle</span>
@@ -123,7 +119,6 @@
             <p class="hint">Yerel geliştirme için: <code>node build.js</code> → <code>dist/index.html</code> oluşur.</p>
             <button class="btn" type="button" id="btn-publish" onclick="publishArtifact()">Artifact'ı Güncelle</button>
           </form>
-          <button class="btn danger" id="btn-lock">Kilitle ve çık</button>
         </div>
       </div>
     </div>

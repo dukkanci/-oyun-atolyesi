@@ -6,18 +6,7 @@ const KIND = Object.fromEntries(KINDS);
 const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!", videolar: "▶" };
 const STATUS = [["acik", "Açık"], ["suruyor", "Sürüyor"], ["bitti", "Bitti"]];
 const STATUS_N = Object.fromEntries(STATUS);
-const LS_KEY = "atolye-key", LS_SEEN = "atolye-seen", LS_INVITE = "atolye-invite";
-
-function genInviteCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const parts = [];
-  for (let i = 0; i < 3; i++) {
-    let part = "";
-    for (let j = 0; j < 4; j++) part += chars[Math.floor(Math.random() * chars.length)];
-    parts.push(part);
-  }
-  return parts.join("-");
-}
+const LS_SEEN = "atolye-seen";
 
 const S = {
   db: null, user: null, meId: null, canWrite: true,
@@ -143,16 +132,6 @@ function renderAvList() {
       mine ? h("img", { src: imgUrl(rawCur.slice(4)), alt: "" }) : null, mine ? "Kendi fotoğrafın · değiştir" : "Kendi fotoğrafını yükle"), inp);
   }
 }
-async function hash(pass) {
-  const s = "atolye|" + pass;
-  try {
-    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
-  } catch (e) {
-    let a = 5381; for (const c of s) a = ((a * 33) ^ c.charCodeAt(0)) >>> 0;
-    return "f" + a.toString(16);
-  }
-}
 function showNoWrite() {
   S.canWrite = false;
   const b = $("nowrite"); if (b) b.hidden = false;
@@ -175,18 +154,6 @@ async function write(fn, errEl) {
 }
 
 /* ---------- boot & routing ---------- */
-function handleInviteFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const inviteCode = params.get("invite");
-  if (inviteCode) {
-    const cleanCode = inviteCode.trim().toUpperCase();
-    ls.set(LS_INVITE, cleanCode);
-    // Clean URL so refresh doesn't re-trigger
-    history.replaceState(null, "", location.pathname);
-    return cleanCode;
-  }
-  return null;
-}
 
 async function boot() {
   const use = window.claude && window.claude.use;
@@ -194,25 +161,44 @@ async function boot() {
   if (!db) { show("s-noaccess"); return; }
   S.db = db; S.user = user; S.assets = assets;
 
-  // Handle invite link from URL
-  handleInviteFromUrl();
-
   startPresence();
   if (!assets) {
     $("nw-filebtn").hidden = true;
     $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
   }
+
+  // Listen to Supabase auth state changes
   if (user) {
+    user.onAuthStateChange(async (event, session) => {
+      if (session && session.user) {
+        S.meId = session.user.id;
+        S.canWrite = (await user.can("data.write")) !== false;
+        if (!S.canWrite) showNoWrite();
+      } else {
+        S.meId = null;
+        S.canWrite = false;
+      }
+      // Check settings and route
+      const snap = await db.doc("team/settings").get();
+      S.settings = snap.exists ? toCamelCase(snap.data()) : null;
+      route();
+    });
+
+    // Initial auth check
     const me = await user.me();
-    S.meId = me.id;
-    S.canWrite = (await user.can("data.write")) !== false;
-    if (!S.canWrite) showNoWrite();
+    if (me && me.id) {
+      S.meId = me.id;
+      S.canWrite = (await user.can("data.write")) !== false;
+      if (!S.canWrite) showNoWrite();
+    }
   }
+
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
   const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
   document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
   window.addEventListener("pagehide", markSeen);
 
+  // Listen to settings changes
   db.doc("team/settings").onSnapshot(snap => {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
@@ -222,33 +208,33 @@ async function boot() {
 function route() {
   const st = S.settings;
   if (st === undefined) return show("s-loading");
-  if (!st || !st.passHash) return show(S.canWrite ? "s-setup" : "s-wait");
-  $("lock-game").textContent = st.game || "Oyun Atölyesi";
 
-  // Check for invite code in localStorage
-  const storedInvite = ls.get(LS_INVITE);
-  const hasValidInvite = storedInvite && st.inviteCode && storedInvite === st.inviteCode;
-  const hasValidPass = ls.get(LS_KEY) === st.passHash;
-
-  if (!hasValidPass && !hasValidInvite) {
-    show("s-lock");
+  // Check if user is authenticated with Supabase
+  if (!S.meId) {
+    // Not logged in - show login screen if settings exist, or setup if first user
+    if (!st) {
+      show("s-setup");
+    } else {
+      show("s-lock");
+    }
+    // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
     if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
     return;
   }
 
-  // Grant write access if entered via invite code
-  if (hasValidInvite && !hasValidPass) {
-    S.canWrite = true;
+  // User is authenticated - check if atölye is set up
+  if (!st) {
+    show(S.canWrite ? "s-setup" : "s-wait");
+    return;
   }
 
+  // Atölye is set up and user is authenticated - show app
   show("s-app");
+  $("lock-game").textContent = st.game || "Oyun Atölyesi";
   $("game-name").textContent = st.game || "Oyun Atölyesi";
   if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
-  // Populate invite link in settings panel
-  const invLinkEl = $("inv-link-value");
-  if (invLinkEl && st.inviteCode) invLinkEl.textContent = location.origin + location.pathname + "?invite=" + st.inviteCode;
   if (!S.notesUnsub) {
     S.liveSince = Date.now();
     S.notesUnsub = S.db.collection("notes").orderBy("updatedAt", "desc").limit(500).onSnapshot(snap => {
@@ -278,62 +264,51 @@ function route() {
 
 $("f-setup").addEventListener("submit", async e => {
   e.preventDefault();
-  const p1 = $("su-pass").value, p2 = $("su-pass2").value, err = $("su-err");
+  const email = $("su-email").value.trim(), p1 = $("su-pass").value, p2 = $("su-pass2").value, err = $("su-err");
   if (p1 !== p2) { err.textContent = "Şifreler aynı değil."; return; }
-  const ph = await hash(p1);
-  const inviteCode = genInviteCode();
-  const inviteLink = location.origin + location.pathname + "?invite=" + inviteCode;
-  ls.set(LS_KEY, ph);
-  ls.set(LS_INVITE, inviteCode);
-  await write(() => S.db.doc("team/settings").set({
-    game: $("su-game").value.trim(), passHash: ph, inviteCode, createdBy: S.meId, createdAt: Date.now()
-  }), err);
-  if (!err.textContent) {
-    toast("Atölye kuruldu! Davet linki hazır.");
-    setTimeout(() => {
-      const msg = "Arkadaşına bu linki gönder, tıklayınca direkt lobiye girecek:\n\n" + inviteLink;
-      if (confirm(msg + "\n\nLinki kopyala?")) {
-        navigator.clipboard.writeText(inviteLink).catch(() => {});
-      }
-    }, 300);
+  if (!S.user) { err.textContent = "Auth servisi yüklenemedi."; return; }
+  try {
+    const result = await S.user.signUp(email, p1);
+    if (result.error) { err.textContent = result.error.message; return; }
+    // Create team/settings with game name
+    await write(() => S.db.doc("team/settings").set({
+      game: $("su-game").value.trim(), createdBy: S.meId, createdAt: Date.now()
+    }), err);
+    if (!err.textContent) {
+      toast("Hesap oluşturuldu ve atölye kuruldu!");
+    }
+  } catch (e) {
+    err.textContent = "Kayıt başarısız: " + e.message;
   }
 });
 
 $("f-lock").addEventListener("submit", async e => {
   e.preventDefault();
-  const ph = await hash($("lk-pass").value);
-  if (S.settings && ph === S.settings.passHash) {
-    ls.set(LS_KEY, ph); $("lk-pass").value = ""; $("lk-err").textContent = ""; route();
-  } else {
-    $("lk-err").textContent = "Şifre yanlış. Arkadaşına doğru şifreyi sor.";
+  const email = $("lk-email").value.trim(), pass = $("lk-pass").value, err = $("lk-err");
+  if (!S.user) { err.textContent = "Auth servisi yüklenemedi."; return; }
+  try {
+    const result = await S.user.signInWithPassword(email, pass);
+    if (result.error) { err.textContent = result.error.message; return; }
+    $("lk-pass").value = ""; err.textContent = ""; route();
+  } catch (e) {
+    err.textContent = "Giriş başarısız: " + e.message;
   }
 });
 
-/* invite code entry */
-$("f-invite").addEventListener("submit", async e => {
-  e.preventDefault();
-  const code = $("inv-code").value.trim().toUpperCase();
-  const err = $("inv-err");
-  if (!S.settings || !S.settings.inviteCode) {
-    err.textContent = "Bu atölyede henüz davet kodu oluşturulmamış.";
-    return;
-  }
-  if (code === S.settings.inviteCode) {
-    ls.set(LS_INVITE, code);
-    $("inv-code").value = "";
-    err.textContent = "";
-    route();
-  } else {
-    err.textContent = "Davet kodu yanlış. Arkadaşından doğru kodu al.";
-  }
-});
-
-/* switch between lock and invite screens */
-$("btn-invite-switch").addEventListener("click", () => {
-  show("s-invite");
-});
-$("btn-lock-switch").addEventListener("click", () => {
+/* invite link screen - just redirects to login or setup */
+$("btn-invite-to-login").addEventListener("click", () => {
   show("s-lock");
+});
+$("btn-invite-to-setup").addEventListener("click", () => {
+  show("s-setup");
+});
+
+/* switch between setup and login screens */
+$("btn-setup-to-login").addEventListener("click", () => {
+  show("s-lock");
+});
+$("btn-lock-to-setup").addEventListener("click", () => {
+  show("s-setup");
 });
 
 /* ---------- notifications & sound ---------- */
@@ -1253,6 +1228,11 @@ $("f-upd").addEventListener("submit", async e => {
 $("btn-settings").addEventListener("click", () => {
   const pop = $("pop-settings"); pop.hidden = !pop.hidden;
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
+  if (!pop.hidden) {
+    // Populate project URL in invite link field
+    const invLinkEl = $("inv-link-value");
+    if (invLinkEl) invLinkEl.textContent = location.origin + location.pathname;
+  }
 });
 document.addEventListener("click", e => {
   if (!e.target.closest(".menu")) { $("pop-settings").hidden = true; $("btn-settings").setAttribute("aria-expanded", "false"); }
@@ -1261,34 +1241,22 @@ $("f-game").addEventListener("submit", async e => {
   e.preventDefault();
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adı kaydedildi");
 });
-$("f-pass").addEventListener("submit", async e => {
-  e.preventDefault();
-  const ph = await hash($("st-pass").value);
-  const old = ls.get(LS_KEY);
-  ls.set(LS_KEY, ph);
-  if (await write(() => S.db.doc("team/settings").update({ passHash: ph }))) { $("st-pass").value = ""; toast("Şifre değiştirildi"); }
-  else ls.set(LS_KEY, old || "");
-});
-$("btn-lock").addEventListener("click", () => { ls.del(LS_KEY); $("pop-settings").hidden = true; route(); });
 
-/* invite link buttons in settings */
+/* invite link button in settings - just copy the project URL */
 $("btn-copy-invite").addEventListener("click", () => {
-  const link = $("inv-link-value").textContent;
-  if (link) {
-    navigator.clipboard.writeText(link).then(() => toast("Davet linki kopyalandı")).catch(() => toast("Kopyalanamadı"));
-  }
-});
-$("btn-regenerate-invite").addEventListener("click", async () => {
-  const newCode = genInviteCode();
-  const newLink = location.origin + location.pathname + "?invite=" + newCode;
-  if (await write(() => S.db.doc("team/settings").update({ inviteCode: newCode }))) {
-    $("inv-link-value").textContent = newLink;
-    toast("Yeni davet linki oluşturuldu");
-  }
+  const link = location.origin + location.pathname;
+  navigator.clipboard.writeText(link).then(() => toast("Proje linki kopyalandı")).catch(() => toast("Kopyalanamadı"));
 });
 
 $("btn-publish").addEventListener("click", () => {
   alert("Yerel build'i güncellemek için:\n1. 'dist/index.html' dosyasını oluştur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
+});
+$("btn-logout").addEventListener("click", async () => {
+  if (S.user) {
+    await S.user.signOut();
+  }
+  $("pop-settings").hidden = true;
+  route();
 });
 
 /* ---------- images ---------- */
