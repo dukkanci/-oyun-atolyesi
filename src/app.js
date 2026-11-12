@@ -49,6 +49,17 @@ function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
 }
+function toCamelCase(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var result = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k)) continue;
+      var camelKey = k.replace(/_([a-z])/g, function(_, letter) { return letter.toUpperCase(); });
+      var val = obj[k];
+      result[camelKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? toCamelCase(val) : val;
+    }
+    return result;
+  }
 function ago(ts) {
   const s = (Date.now() - ts) / 1000;
   if (s < 60) return "az önce";
@@ -203,7 +214,7 @@ async function boot() {
   window.addEventListener("pagehide", markSeen);
 
   db.doc("team/settings").onSnapshot(snap => {
-    S.settings = snap.exists ? snap.data() : null;
+    S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
 }
