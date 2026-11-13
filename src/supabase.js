@@ -238,6 +238,15 @@
       signInWithPassword: function(email, password) {
         return supabaseClient.auth.signInWithPassword({ email: email, password: password });
       },
+      // Google ile giriş
+      signInWithGoogle: function() {
+        return supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin + window.location.pathname
+          }
+        });
+      },
       // Çıkış yap
       signOut: function() {
         return supabaseClient.auth.signOut();

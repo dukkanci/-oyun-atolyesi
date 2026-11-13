@@ -311,6 +311,18 @@ $("btn-lock-to-setup").addEventListener("click", () => {
   show("s-setup");
 });
 
+/* Google OAuth buttons */
+$("btn-setup-google").addEventListener("click", async () => {
+  if (!S.user) { toast("Auth servisi yüklenemedi."); return; }
+  const result = await S.user.signInWithGoogle();
+  if (result.error) toast("Google ile giriş başarısız: " + result.error.message);
+});
+$("btn-lock-google").addEventListener("click", async () => {
+  if (!S.user) { toast("Auth servisi yüklenemedi."); return; }
+  const result = await S.user.signInWithGoogle();
+  if (result.error) toast("Google ile giriş başarısız: " + result.error.message);
+});
+
 /* ---------- notifications & sound ---------- */
 let audioCtx = null;
 S.sound = ls.get("atolye-sound") !== "off";
