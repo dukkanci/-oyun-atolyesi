@@ -159,9 +159,10 @@
           var query = supabaseClient.from(self.tableName).select('*');
           for (var field in self._query) {
             var q = self._query[field];
-            if (q.op === '==') query = query.eq(field, q.value);
+            var snakeField = field.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); });
+            if (q.op === '==') query = query.eq(snakeField, q.value);
           }
-          if (self._orderBy) query = query.order(self._orderBy.field, { ascending: self._orderBy.dir === 'asc' });
+          if (self._orderBy) query = query.order(self._orderBy.field.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); }), { ascending: self._orderBy.dir === 'asc' });
           if (self._limit) query = query.limit(self._limit);
           query.then(function(r) {
             if (r.error) { onError && onError(r.error); return; }
