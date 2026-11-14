@@ -138,7 +138,7 @@ function showNoWrite() {
   const b = $("nowrite"); if (b) b.hidden = false;
 }
 function show(id) {
-  for (const s of ["s-loading", "s-noaccess", "s-setup", "s-wait", "s-lock", "s-app"]) $(s).hidden = s !== id;
+  for (const s of ["s-loading", "s-noaccess", "s-login", "s-wait", "s-app"]) $(s).hidden = s !== id;
 }
 async function write(fn, errEl) {
   try { await fn(); if (errEl) errEl.textContent = ""; return true; }
