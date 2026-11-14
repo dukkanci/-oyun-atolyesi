@@ -202,6 +202,14 @@ async function boot() {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
+
+  // Fix: gizli dosya input'una name attribute ekle (form validation hatası önlemi)
+  setTimeout(() => {
+    const fileInput = document.getElementById("nw-file");
+    if (fileInput && !fileInput.name) {
+      fileInput.name = "nw-file";
+    }
+  }, 0);
 }
 
 function generateUserId(username) {
