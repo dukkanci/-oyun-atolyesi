@@ -1457,7 +1457,7 @@ async function render() {
   if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
   ids.delete(undefined); ids.delete(null);
   if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
-  computeColors(); S.lastIds = ids; watchPings(); renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
 }
 /* online status: everyone with the page open is in the room; closing the tab leaves it */
 const PRES = { on: "çevrimiçi", away: "arka planda", off: "çevrimdışı" };
