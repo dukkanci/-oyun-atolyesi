@@ -1,4 +1,4 @@
-// Oyun Atölyesi — Supabase Wrapper (GitHub Pages uyumlu, hata toleranslı, 503 retry)
+// Oyun Atölyesi — Supabase Wrapper (Basit username-only sistem, GitHub Pages uyumlu, hata toleranslı, 503 retry)
 
 (function() {
   'use strict';
@@ -80,13 +80,10 @@
   function initSupabase() {
     return loadSupabaseSDK().then(function() {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
         db: { schema: 'public' },
         global: { headers: { 'x-client-info': 'oyun-atolyesi' } }
       });
-      // Email/password authentication - no auto sign-in
-      // Auth state is managed by the app via signUp/signInWithPassword/signOut
-      console.log('%c[Oyun Atölyesi] Supabase mod aktif (email/password auth, real-time)', 'color: #3ECF8E; font-weight: bold');
+      console.log('%c[Oyun Atölyesi] Supabase mod aktif (basit username-only, real-time)', 'color: #3ECF8E; font-weight: bold');
       return true;
     }).catch(function(e) {
       console.error('[Oyun Atölyesi] Supabase SDK yükleme hatası:', e);
@@ -109,9 +106,7 @@
   function withRetry(promiseFn, retries, delay) {
     try {
       var result = promiseFn();
-      // Sonuç Promise mi kontrol et
       if (!result || typeof result.then !== 'function' || typeof result.catch !== 'function') {
-        // Promise dönmediyse, Promise olarak wrap et
         return Promise.resolve(result).then(function(val) {
           return val;
         }).catch(function(err) {
@@ -229,62 +224,6 @@
     };
   }
 
-  function createMockUser() {
-    return {
-      // Kullanıcı kaydı (email/password)
-      signUp: function(email, password) {
-        return supabaseClient.auth.signUp({ email: email, password: password });
-      },
-      // Email/password ile giriş
-      signInWithPassword: function(email, password) {
-        return supabaseClient.auth.signInWithPassword({ email: email, password: password });
-      },
-      // Google ile giriş
-      signInWithGoogle: function() {
-        return supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin + window.location.pathname
-          }
-        });
-      },
-      // Çıkış yap
-      signOut: function() {
-        return supabaseClient.auth.signOut();
-      },
-      // Mevcut kullanıcıyı getir
-      getUser: function() {
-        return supabaseClient.auth.getUser();
-      },
-      // Mevcut oturumu getir
-      getSession: function() {
-        return supabaseClient.auth.getSession();
-      },
-      // Auth state değişikliklerini dinle
-      onAuthStateChange: function(callback) {
-        return supabaseClient.auth.onAuthStateChange(callback);
-      },
-      // Mevcut kullanıcı bilgisi (me() - app.js uyumluluğu için)
-      me: function() {
-        return supabaseClient.auth.getUser().then(function(r) { return { id: r.data.user ? r.data.user.id : null }; });
-      },
-      can: function() { return Promise.resolve(true); },
-      profiles: function(ids) {
-        return supabaseClient.from('users').select('id, name').in('id', ids).then(function(r) {
-          var nameMap = {};
-          (r.data || []).forEach(function(d) { nameMap[d.id] = d.name; });
-          return supabaseClient.auth.getUser().then(function(me) {
-            var result = {};
-            var myId = me.data.user ? me.data.user.id : null;
-            ids.forEach(function(id) { result[id] = { id: id, name: nameMap[id] || (id === myId ? 'Sen' : 'Arkadaşın') }; });
-            return result;
-          });
-        });
-      },
-      _setCurrentUser: function(id) {}
-    };
-  }
-
   function createMockAssets() {
     return {
       upload: function(file, options) {
@@ -312,102 +251,6 @@
     };
   }
 
-  function createMockRoom() {
-    var ROOM_NAME = 'default';
-    var presenceChannel = null;
-    var signalingChannel = null;
-
-    function getPresenceChannel() {
-      if (!presenceChannel) {
-        presenceChannel = supabaseClient.channel('room_presence:default');
-        presenceChannel.on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
-          // presence değiştiğinde dinleyiciler tetiklenir
-        });
-        presenceChannel.subscribe();
-      }
-      return presenceChannel;
-    }
-
-    function getSignalingChannel(userId) {
-      if (!signalingChannel) {
-        signalingChannel = supabaseClient.channel('room_signaling:default');
-        signalingChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + userId }, function(payload) {
-          // signaling mesajı geldi
-        });
-        signalingChannel.subscribe();
-      }
-      return signalingChannel;
-    }
-
-    return {
-      presence: function(data) {
-        return supabaseClient.auth.getUser().then(function(r) {
-          var user = r.data.user;
-          if (!user) return;
-          var d = { room: 'default', user_id: user.id, updated_at: Date.now() };
-          // room_presence tablosunda sadece room, user_id, updated_at kolonları var
-          // data parametresi (visible vb.) veritabanına yazılmamalı
-          var snakeData = toSnakeCase(d);
-          return withRetry(function() { return supabaseClient.from('room_presence').upsert(snakeData, { returning: 'representation', onConflict: 'room,user_id' }); }, 3, 500);
-        });
-      },
-      peers: function() {
-        return withRetry(function() { return supabaseClient.from('room_presence').select('user_id, *').eq('room', 'default'); }, 3, 500).then(function(r) {
-          return supabaseClient.auth.getUser().then(function(me) {
-            var myId = me.data.user ? me.data.user.id : null;
-            return (r.data || []).map(function(d) { return { peer: d.user_id, by: d.user_id, presence: d, sameTab: d.user_id === myId }; });
-          });
-        });
-      },
-      onPeers: function(cb) {
-        // Kanalı bir kez oluştur, tekrar subscrible etme
-        if (!realtimeChannels['room_peers']) {
-          var channel = supabaseClient.channel('room_peers');
-          channel.on('postgres_changes', { event: '*', schema: 'public', table: 'room_presence', filter: 'room=eq.default' }, function() {
-            supabaseClient.from('room_presence').select('user_id, *').eq('room', 'default').then(function(r) {
-              cb({ peers: r.data || [], left: [] });
-            });
-          });
-          channel.subscribe();
-          realtimeChannels['room_peers'] = channel;
-        }
-        return function() { /* keep alive */ };
-      },
-      on: function(event, cb) {
-        if (event === 'voice') {
-          return supabaseClient.auth.getUser().then(function(r) {
-            var me = r.data.user;
-            if (!me) return function() {};
-            var channelKey = 'signaling:' + me.id;
-            if (!realtimeChannels[channelKey]) {
-              var channel = supabaseClient.channel('signaling:' + me.id);
-              channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_signaling', filter: 'to=eq.' + me.id }, function(payload) {
-                cb({ peer: payload.new.from, data: payload.new.data, sameTab: false });
-                supabaseClient.from('room_signaling').delete().eq('id', payload.new.id).catch(function() {});
-              });
-              channel.subscribe();
-              realtimeChannels[channelKey] = channel;
-            }
-            return function() { /* keep alive */ };
-          });
-        }
-        return function() {};
-      },
-      emit: function(event, data) {
-        if (event === 'voice') {
-          return supabaseClient.auth.getUser().then(function(r) {
-            var me = r.data.user;
-            if (!me) return;
-            var snakeData = toSnakeCase({ room: 'default', from: me.id, to: data.to, data: data.data, created_at: Date.now() });
-            return withRetry(function() {
-              return supabaseClient.from('room_signaling').insert(snakeData);
-            }, 3, 500);
-          });
-        }
-      }
-    };
-  }
-
   window.claude = window.claude || {};
   window.claude.use = function(name) {
     if (!supabaseClient) {
@@ -420,9 +263,7 @@
   function getService(name) {
     switch (name) {
       case 'db': return { collection: createMockCollection, doc: function(path) { var parts = path.split('/'); return createMockDoc(parts[0], parts[1]); } };
-      case 'user': return createMockUser();
       case 'assets': return createMockAssets();
-      case 'room': return createMockRoom();
       default: return null;
     }
   }

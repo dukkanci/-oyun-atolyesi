@@ -7,6 +7,7 @@ const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gor
 const STATUS = [["acik", "Açık"], ["suruyor", "Sürüyor"], ["bitti", "Bitti"]];
 const STATUS_N = Object.fromEntries(STATUS);
 const LS_SEEN = "atolye-seen";
+const LS_USERNAME = "atolye-username";
 
 const S = {
   db: null, user: null, meId: null, canWrite: true,
@@ -157,9 +158,9 @@ async function write(fn, errEl) {
 
 async function boot() {
   const use = window.claude && window.claude.use;
-  const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
+  const [db, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("assets")]) : [null, null];
   if (!db) { show("s-noaccess"); return; }
-  S.db = db; S.user = user; S.assets = assets;
+  S.db = db; S.assets = assets;
 
   startPresence();
   if (!assets) {
@@ -167,30 +168,12 @@ async function boot() {
     $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
   }
 
-  // Listen to Supabase auth state changes
-  if (user) {
-    user.onAuthStateChange(async (event, session) => {
-      if (session && session.user) {
-        S.meId = session.user.id;
-        S.canWrite = (await user.can("data.write")) !== false;
-        if (!S.canWrite) showNoWrite();
-      } else {
-        S.meId = null;
-        S.canWrite = false;
-      }
-      // Check settings and route
-      const snap = await db.doc("team/settings").get();
-      S.settings = snap.exists ? toCamelCase(snap.data()) : null;
-      route();
-    });
-
-    // Initial auth check
-    const me = await user.me();
-    if (me && me.id) {
-      S.meId = me.id;
-      S.canWrite = (await user.can("data.write")) !== false;
-      if (!S.canWrite) showNoWrite();
-    }
+  // Check for stored username
+  const storedUsername = ls.get(LS_USERNAME);
+  if (storedUsername) {
+    S.meId = generateUserId(storedUsername);
+    S.username = storedUsername;
+    S.canWrite = true;
   }
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
@@ -205,17 +188,27 @@ async function boot() {
   }, () => show("s-noaccess"));
 }
 
+function generateUserId(username) {
+  // Simple hash to generate consistent user ID from username
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = ((hash << 5) - hash) + username.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return "user_" + Math.abs(hash).toString(36);
+}
+
 function route() {
   const st = S.settings;
   if (st === undefined) return show("s-loading");
 
-  // Check if user is authenticated with Supabase
+  // Check if user has username
   if (!S.meId) {
     // Not logged in - show login screen if settings exist, or setup if first user
     if (!st) {
-      show("s-setup");
+      show("s-login");
     } else {
-      show("s-lock");
+      show("s-login");
     }
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
@@ -224,13 +217,13 @@ function route() {
     return;
   }
 
-  // User is authenticated - check if atölye is set up
+  // User has username - check if atölye is set up
   if (!st) {
-    show(S.canWrite ? "s-setup" : "s-wait");
+    show(S.canWrite ? "s-login" : "s-wait");
     return;
   }
 
-  // Atölye is set up and user is authenticated - show app
+  // Atölye is set up and user has username - show app
   show("s-app");
   $("lock-game").textContent = st.game || "Oyun Atölyesi";
   $("game-name").textContent = st.game || "Oyun Atölyesi";
@@ -262,65 +255,40 @@ function route() {
   render();
 }
 
-$("f-setup").addEventListener("submit", async e => {
+$("f-login").addEventListener("submit", async e => {
   e.preventDefault();
-  const email = $("su-email").value.trim(), p1 = $("su-pass").value, p2 = $("su-pass2").value, err = $("su-err");
-  if (p1 !== p2) { err.textContent = "Şifreler aynı değil."; return; }
-  if (!S.user) { err.textContent = "Auth servisi yüklenemedi."; return; }
-  try {
-    const result = await S.user.signUp(email, p1);
-    if (result.error) { err.textContent = result.error.message; return; }
-    // Create team/settings with game name
+  const username = $("lg-username").value.trim();
+  const gameName = $("lg-game").value.trim();
+  const err = $("lg-err");
+
+  if (!username) { err.textContent = "Kullanıcı adı girin."; return; }
+  if (username.length < 2) { err.textContent = "Kullanıcı adı en az 2 karakter olmalı."; return; }
+
+  const meId = generateUserId(username);
+  ls.set(LS_USERNAME, username);
+  S.meId = meId;
+  S.username = username;
+  S.canWrite = true;
+
+  // Create settings if first user
+  if (!S.settings) {
+    const game = gameName || "Oyun Atölyesi";
     await write(() => S.db.doc("team/settings").set({
-      game: $("su-game").value.trim(), createdBy: S.meId, createdAt: Date.now()
+      game, createdBy: meId, createdAt: Date.now()
     }), err);
-    if (!err.textContent) {
-      toast("Hesap oluşturuldu ve atölye kuruldu!");
-    }
-  } catch (e) {
-    err.textContent = "Kayıt başarısız: " + e.message;
+    if (err.textContent) return;
   }
+
+  err.textContent = "";
+  route();
 });
 
-$("f-lock").addEventListener("submit", async e => {
-  e.preventDefault();
-  const email = $("lk-email").value.trim(), pass = $("lk-pass").value, err = $("lk-err");
-  if (!S.user) { err.textContent = "Auth servisi yüklenemedi."; return; }
-  try {
-    const result = await S.user.signInWithPassword(email, pass);
-    if (result.error) { err.textContent = result.error.message; return; }
-    $("lk-pass").value = ""; err.textContent = ""; route();
-  } catch (e) {
-    err.textContent = "Giriş başarısız: " + e.message;
-  }
-});
-
-/* invite link screen - just redirects to login or setup */
-$("btn-invite-to-login").addEventListener("click", () => {
-  show("s-lock");
-});
-$("btn-invite-to-setup").addEventListener("click", () => {
-  show("s-setup");
-});
-
-/* switch between setup and login screens */
-$("btn-setup-to-login").addEventListener("click", () => {
-  show("s-lock");
-});
-$("btn-lock-to-setup").addEventListener("click", () => {
-  show("s-setup");
-});
-
-/* Google OAuth buttons */
-$("btn-setup-google").addEventListener("click", async () => {
-  if (!S.user) { toast("Auth servisi yüklenemedi."); return; }
-  const result = await S.user.signInWithGoogle();
-  if (result.error) toast("Google ile giriş başarısız: " + result.error.message);
-});
-$("btn-lock-google").addEventListener("click", async () => {
-  if (!S.user) { toast("Auth servisi yüklenemedi."); return; }
-  const result = await S.user.signInWithGoogle();
-  if (result.error) toast("Google ile giriş başarısız: " + result.error.message);
+$("btn-logout").addEventListener("click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  route();
 });
 
 /* ---------- notifications & sound ---------- */
@@ -1258,6 +1226,14 @@ $("f-game").addEventListener("submit", async e => {
 $("btn-copy-invite").addEventListener("click", () => {
   const link = location.origin + location.pathname;
   navigator.clipboard.writeText(link).then(() => toast("Proje linki kopyalandı")).catch(() => toast("Kopyalanamadı"));
+});
+
+$("btn-logout").addEventListener("click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  route();
 });
 
 $("btn-publish").addEventListener("click", () => {
