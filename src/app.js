@@ -304,9 +304,7 @@ $("f-login").addEventListener("submit", async e => {
   try {
     console.log("🔍 Ping satırı ekleniyor...");
     await S.db.doc("pings/" + meId).set({
-      from: meId,
-      to: meId,
-      data: {}
+      id: meId
     });
     console.log("🔍 Ping satırı eklendi");
   } catch (pingErr) {
