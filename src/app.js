@@ -300,6 +300,20 @@ $("f-login").addEventListener("submit", async e => {
     console.log("🔍 S.settings lokal set edildi:", S.settings);
   }
 
+  // Yeni kullanıcı için ping satırı da ekle (406 hatasını önlemek için)
+  try {
+    console.log("🔍 Ping satırı ekleniyor...");
+    await S.db.doc("pings/" + meId).set({
+      from: meId,
+      to: meId,
+      data: {},
+      created_at: Date.now()
+    });
+    console.log("🔍 Ping satırı eklendi");
+  } catch (pingErr) {
+    console.log("🔍 Ping ekleme hatası (önemsiz):", pingErr);
+  }
+
   err.textContent = "";
   console.log("🔍 Calling route()");
   route();
