@@ -199,11 +199,16 @@ function generateUserId(username) {
 }
 
 function route() {
+  console.log("🔍 route() çağrıldı", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings });
   const st = S.settings;
-  if (st === undefined) return show("s-loading");
+  if (st === undefined) {
+    console.log("🔍 route: settings undefined, showing s-loading");
+    return show("s-loading");
+  }
 
   // Check if user has username
   if (!S.meId) {
+    console.log("🔍 route: no meId, showing s-login");
     // Not logged in - show login screen if settings exist, or setup if first user
     if (!st) {
       show("s-login");
@@ -217,11 +222,16 @@ function route() {
     return;
   }
 
+  console.log("🔍 route: has meId, checking settings", { st: !!st });
+
   // User has username - check if atölye is set up
   if (!st) {
+    console.log("🔍 route: no settings, showing s-login or s-wait");
     show(S.canWrite ? "s-login" : "s-wait");
     return;
   }
+
+  console.log("🔍 route: showing s-app", { game: st.game });
 
   // Atölye is set up and user has username - show app
   show("s-app");
@@ -256,30 +266,39 @@ function route() {
 }
 
 $("f-login").addEventListener("submit", async e => {
+  console.log("🔍 Form submit başladı", { username: $("lg-username").value.trim() });
   e.preventDefault();
   const username = $("lg-username").value.trim();
   const gameName = $("lg-game").value.trim();
   const err = $("lg-err");
 
+  console.log("🔍 Form validation", { username, gameName });
   if (!username) { err.textContent = "Kullanıcı adı girin."; return; }
   if (username.length < 2) { err.textContent = "Kullanıcı adı en az 2 karakter olmalı."; return; }
 
   const meId = generateUserId(username);
+  console.log("🔍 Generated meId", meId);
   ls.set(LS_USERNAME, username);
   S.meId = meId;
   S.username = username;
   S.canWrite = true;
+  console.log("🔍 S.meId set", S.meId);
 
   // Create settings if first user
   if (!S.settings) {
+    console.log("🔍 Creating settings, S.settings:", S.settings);
     const game = gameName || "Oyun Atölyesi";
     await write(() => S.db.doc("team/settings").set({
       game, createdBy: meId, createdAt: Date.now()
     }), err);
-    if (err.textContent) return;
+    if (err.textContent) {
+      console.log("🔍 Write error:", err.textContent);
+      return;
+    }
   }
 
   err.textContent = "";
+  console.log("🔍 Calling route()");
   route();
 });
 
