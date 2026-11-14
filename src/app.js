@@ -162,7 +162,7 @@ async function boot() {
   if (!db) { show("s-noaccess"); return; }
   S.db = db; S.assets = assets;
 
-  startPresence();
+  // startPresence();  // Ping/dürt özelliği kapalı (406 hatası önlemi)
   if (!assets) {
     $("nw-filebtn").hidden = true;
     $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
