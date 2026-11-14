@@ -288,13 +288,15 @@ $("f-login").addEventListener("submit", async e => {
   if (!S.settings) {
     console.log("🔍 Creating settings, S.settings:", S.settings);
     const game = gameName || "Oyun Atölyesi";
-    await write(() => S.db.doc("team/settings").set({
-      game, createdBy: meId, createdAt: Date.now()
-    }), err);
+    const newSettings = { game, createdBy: meId, createdAt: Date.now() };
+    await write(() => S.db.doc("team/settings").set(newSettings), err);
     if (err.textContent) {
       console.log("🔍 Write error:", err.textContent);
       return;
     }
+    // Yazma başarılıysa S.settings'i lokal olarak set et
+    S.settings = newSettings;
+    console.log("🔍 S.settings lokal set edildi:", S.settings);
   }
 
   err.textContent = "";
