@@ -300,15 +300,19 @@ $("f-login").addEventListener("submit", async e => {
     console.log("🔍 S.settings lokal set edildi:", S.settings);
   }
 
-  // Yeni kullanıcı için ping satırı da ekle (406 hatasını önlemek için)
+  // Her girişte ping satırı kontrolü/oluşturma (406 hatasını önlemek için)
   try {
-    console.log("🔍 Ping satırı ekleniyor...");
-    await S.db.doc("pings/" + meId).set({
-      id: meId
-    });
-    console.log("🔍 Ping satırı eklendi");
+    console.log("🔍 Ping satırı kontrol ediliyor...");
+    const pingDoc = await S.db.doc("pings/" + meId).get();
+    if (!pingDoc.exists) {
+      console.log("🔍 Ping satırı yok, ekleniyor...");
+      await S.db.doc("pings/" + meId).set({ id: meId });
+      console.log("🔍 Ping satırı eklendi");
+    } else {
+      console.log("🔍 Ping satırı zaten var");
+    }
   } catch (pingErr) {
-    console.log("🔍 Ping ekleme hatası (önemsiz):", pingErr);
+    console.log("🔍 Ping kontrol/ekleme hatası (önemsiz):", pingErr);
   }
 
   err.textContent = "";
