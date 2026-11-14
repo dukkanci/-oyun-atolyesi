@@ -235,7 +235,8 @@ function route() {
 
   // Atölye is set up and user has username - show app
   show("s-app");
-  $("lock-game").textContent = st.game || "Oyun Atölyesi";
+  const lockGameEl = $("lock-game");
+  if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atölyesi";
   $("game-name").textContent = st.game || "Oyun Atölyesi";
   if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
   if (!S.notesUnsub) {
