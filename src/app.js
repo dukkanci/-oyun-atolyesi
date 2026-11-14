@@ -50,18 +50,33 @@ function toCamelCase(obj) {
     }
     return result;
   }
+// Firestore Timestamp ve benzeri objeleri milisaniyeye çeviren yardımcı
+function toMillis(ts) {
+  if (!ts) return null;
+  if (typeof ts === 'number') return ts;
+  if (ts && typeof ts.toMillis === 'function') return ts.toMillis(); // Firestore Timestamp
+  if (ts && typeof ts.seconds === 'number') return ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6); // Firestore protobuf format
+  return null;
+}
+
 function ago(ts) {
-  if (!ts || typeof ts !== 'number' || isNaN(ts)) return "bilinmiyor";
-  const s = (Date.now() - ts) / 1000;
+  const ms = toMillis(ts);
+  if (ms === null || isNaN(ms)) return "bilinmiyor";
+  const s = (Date.now() - ms) / 1000;
   if (s < 60) return "az önce";
   if (s < 3600) return Math.floor(s / 60) + " dk önce";
   if (s < 86400) return Math.floor(s / 3600) + " sa önce";
   if (s < 172800) return "dün";
-  return new Date(ts).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? "bilinmiyor" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 }
+
 function who(id) {
   if (id && id === S.meId) return "Sen";
-  return (S.profiles[id] && S.profiles[id].name) || "Arkadaşın";
+  const profile = S.profiles[id];
+  if (profile && profile.name) return profile.name;
+  // Anonim kullanıcı için short ID (ilk 6 karakter)
+  return id ? "Arkadaşın " + String(id).slice(0, 6) : "Arkadaşın";
 }
 function computeColors() {
   const first = new Map();
