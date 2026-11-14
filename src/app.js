@@ -51,6 +51,7 @@ function toCamelCase(obj) {
     return result;
   }
 function ago(ts) {
+  if (!ts || typeof ts !== 'number' || isNaN(ts)) return "bilinmiyor";
   const s = (Date.now() - ts) / 1000;
   if (s < 60) return "az önce";
   if (s < 3600) return Math.floor(s / 60) + " dk önce";
@@ -1624,7 +1625,7 @@ S.lastSeenOnline = {};
 function markLastSeen(id) { if (S.db && id) S.db.doc("lastseen/" + id).set({ at: Date.now() }).catch(() => {}); }
 function presLabel(id, st) {
   const at = S.lastSeenOnline[id];
-  return PRES[st] + (st === "off" && at ? " · son görülme " + ago(at) : "");
+  return PRES[st] + (st === "off" && at && typeof at === 'number' && !isNaN(at) ? " · son görülme " + ago(at) : "");
 }
 setInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
 S.typing = new Set();
@@ -1655,7 +1656,16 @@ function renderPeople(ids) {
       st && id !== S.meId ? h("span", { class: "pst2 " + st }, presLabel(id, st)) : null);
     if (id !== S.meId && S.canWrite && S.meId) {
       const out = S.pingOut[id];
-      const st = out && out.from === S.meId ? (out.seenAt && out.seenAt >= out.at ? "gördü ✓" : "bekliyor…") : "";
+      let st = "";
+      if (out && out.from === S.meId) {
+        const seenAt = out.seenAt;
+        const at = out.at;
+        if (seenAt && typeof seenAt === 'number' && at && typeof at === 'number' && seenAt >= at) {
+          st = "gördü ✓";
+        } else if (seenAt) {
+          st = "bekliyor…";
+        }
+      }
       chip.append(h("button", { class: "pingbtn", type: "button", title: "Dürt: sesli uyarı gider", onclick: () => sendPing(id) }, "Dürt"),
         st ? h("span", { class: "pst" }, st) : null);
     }
