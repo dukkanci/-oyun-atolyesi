@@ -186,10 +186,46 @@ async function boot() {
 
   // Check for stored username
   const storedUsername = ls.get(LS_USERNAME);
+  const storedMeId = ls.get("atolye-meid");
   if (storedUsername) {
+    const generatedMeId = generateUserId(storedUsername);
+    const storedMeId = ls.get("atolye-meid");
+    if (storedMeId && storedMeId !== generateUserId(storedUsername)) {
+      console.warn("MeId uyuşmazlığı, yeniden hesaplanıyor:", storedMeId, "->", generateUserId(storedUsername));
+    }
     S.meId = generateUserId(storedUsername);
     S.username = storedUsername;
     S.canWrite = true;
+    // MeId'yi localStorage'da da sakla (oturum kalıcılığı için)
+    ls.set("atolye-meid", S.meId);
+  } else {
+    S.meId = null;
+    S.username = null;
+    S.canWrite = false;
+  }
+
+  S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
+  const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
+  window.addEventListener("pagehide", markSeen);
+
+  // Oturum doğrulama: localStorage'da kullanıcı varsa meId'yi doğrula
+  if (S.meId) {
+    try {
+      const me = await user?.me();
+      if (me && me.id && me.id !== S.meId) {
+        console.warn("MeId uyuşmazlığı, localStorage güncelleniyor:", S.meId, "->", me.id);
+        ls.set("atolye-meid", me.id);
+        S.meId = me.id;
+      }
+    } catch (e) {
+      console.warn("Oturum doğrulama hatası:", e);
+    }
+  }
+
+  // MeId'yi localStorage'da da sakla (oturum kalıcılığı için)
+  if (S.meId) {
+    ls.set("atolye-meid", S.meId);
   }
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
