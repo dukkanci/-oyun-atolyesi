@@ -229,9 +229,6 @@ async function boot() {
   }
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
-  const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
-  document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
-  window.addEventListener("pagehide", markSeen);
 
   // Listen to settings changes
   db.doc("team/settings").onSnapshot(snap => {
