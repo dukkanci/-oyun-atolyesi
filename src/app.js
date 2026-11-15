@@ -75,8 +75,8 @@ function who(id) {
   if (id && id === S.meId) return "Sen";
   const profile = S.profiles[id];
   if (profile && profile.name) return profile.name;
-  // Anonim kullanıcı için short ID (ilk 6 karakter)
-  return id ? "Arkadaşın " + String(id).slice(0, 6) : "Arkadaşın";
+  // Anonim kullanıcı için short ID (ilk 8 karakter - daha az çakışma)
+  return id ? "Arkadaşın " + String(id).slice(0, 8) : "Arkadaşın";
 }
 function computeColors() {
   const first = new Map();
@@ -229,6 +229,13 @@ async function boot() {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
+
+  // Initial route call so app doesn't stay on loading forever if listener is slow/fails
+  // If we have a user session but settings not loaded yet, treat as "settings not created yet" -> show login
+  if (S.settings === undefined && S.meId) {
+    S.settings = null;
+  }
+  route();
 
   // Fix: gizli dosya input'una name attribute ekle (form validation hatası önlemi)
   setTimeout(() => {
@@ -1056,19 +1063,22 @@ function renderJobs() {
   const starting = cl.on && !(cl.ack >= cl.since);
   const st = $("claude-status");
   st.className = "cstat " + (cl.on ? (starting ? "starting" : "on") : "off");
-  st.replaceChildren(h("span", { class: "cdot", "aria-hidden": "true" }),
+  const statusChildren = [
+    h("span", { class: "cdot", "aria-hidden": "true" }),
     h("div", { class: "ctext" },
       h("div", {}, cl.on ? (starting ? "Claude açılıyor… en geç 1 dakika içinde devreye girer" : "Claude açık · her dakika yeni işlere bakıyor") : "Claude kapalı · işler sırada bekler"),
       h("div", { class: "csub" }, cl.on
         ? (cl.by ? who(cl.by) + " açtı · " : "") + "yeni iş gelmezse yaklaşık " + left + " dk sonra kendiliğinden kapanır"
         : "Özgür açınca " + fmtMins(mins) + " açık kalır, her yeni iş süreyi baştan başlatır. Bu sürede iş gelmezse Claude tamamen kapanır."),
-      S.canWrite && S.meId && cl.on ? h("div", { class: "tadj" },
+      ...(S.canWrite && S.meId && cl.on ? [h("div", { class: "tadj" },
         h("button", { class: "btn sm", type: "button", disabled: mins <= 5, onclick: () => adjustMinutes(-15) }, "− 15 dk"),
         h("span", { class: "mono" }, "Süre: " + fmtMins(mins)),
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(15) }, "+ 15 dk"),
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
-        h("span", { class: "csub" }, "en fazla 8 saat")) : null),
-    S.canWrite && S.meId && cl.on ? h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat") : null);
+        h("span", { class: "csub" }, "en fazla 8 saat"))] : []),
+    ...(S.canWrite && S.meId && cl.on ? [h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat")] : [])
+  ];
+  st.replaceChildren(...statusChildren.filter(c => c != null));
   box.replaceChildren();
   if (!S.jobs.length) box.append(h("div", { class: "empty" }, h("strong", {}, "Henüz iş yok"),
     "Soldan Claude'a yapmasını istediğin şeyi yaz. Sırası gelince yapılır ve sonucu burada görünür."));
@@ -1327,20 +1337,10 @@ $("btn-logout").addEventListener("click", () => {
 $("btn-publish").addEventListener("click", () => {
   alert("Yerel build'i güncellemek için:\n1. 'dist/index.html' dosyasını oluştur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
 });
-$("btn-logout").addEventListener("click", async () => {
-  if (S.user) {
-    await S.user.signOut();
-  }
-  $("pop-settings").hidden = true;
-  route();
-});
-
 // Kullanıcı Listesi butonu - event delegation ile (buton DOM'da olmasa bile çalışır)
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("#btn-user-list");
-  if (btn) {
-    showUserListModal();
-  }
+// Bu sayede buton DOM'a eklendiğinde (giriş yapıldığında panel göründüğünde) otomatik çalışır
+document.addEventListener("click", e => {
+  if (e.target.closest("#btn-user-list")) showUserListModal();
 });
 
 function showUserListModal() {
@@ -1831,7 +1831,7 @@ function renderPeople(ids) {
         }
       }
       chip.append(h("button", { class: "pingbtn", type: "button", title: "Dürt: sesli uyarı gider", onclick: () => sendPing(id) }, "Dürt"),
-        st ? h("span", { class: "pst" }, st) : null);
+        ...(st ? [h("span", { class: "pst" }, st)] : []));
     }
     box.append(chip);
   }
@@ -2068,16 +2068,19 @@ async function vote(id, v) {
 
 function renderEvents() {
   const evs = [];
+  const addEvent = (at, by, text, note) => {
+    if (typeof at === 'number' && !isNaN(at)) evs.push({ at, by, text, note });
+  };
   for (const n of S.notes) {
-    evs.push({ at: n.createdAt, by: n.author, text: "not ekledi: ", note: n });
+    addEvent(n.createdAt, n.author, "not ekledi: ", n);
     if (n.updatedAt - n.createdAt > 2000 && !(n.replies || []).some(r => r.at === n.updatedAt))
-      evs.push({ at: n.updatedAt, by: n.updatedBy, text: "notu güncelledi: ", note: n });
-    for (const r of n.replies || []) evs.push({ at: r.at, by: r.a, text: "yanıt yazdı: ", note: n });
-    for (const [uid, val] of Object.entries(n.votes || {})) if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "onay verdi: " : "reddetti: ", note: n });
-    for (const w of workers(n)) evs.push({ at: w.at, by: w.id, text: "ilgilenmeye başladı: ", note: n });
-    if (n.starred && n.starred.at) evs.push({ at: n.starred.at, by: n.starred.by, text: "★ yıldızladı: ", note: n });
+      addEvent(n.updatedAt, n.updatedBy, "notu güncelledi: ", n);
+    for (const r of n.replies || []) addEvent(r.at, r.a, "yanıt yazdı: ", n);
+    for (const [uid, val] of Object.entries(n.votes || {})) if (val) addEvent(val.at, uid, val.v === "yes" ? "onay verdi: " : "reddetti: ", n);
+    for (const w of workers(n)) addEvent(w.at, w.id, "ilgilenmeye başladı: ", n);
+    if (n.starred && n.starred.at) addEvent(n.starred.at, n.starred.by, "★ yıldızladı: ", n);
     for (const m of Object.values(n.rvotes || {})) for (const [uid, val] of Object.entries(m || {}))
-      if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "bir yorumu onayladı: " : "bir yorumu reddetti: ", note: n });
+      if (val) addEvent(val.at, uid, val.v === "yes" ? "bir yorumu onayladı: " : "bir yorumu reddetti: ", n);
   }
   evs.sort((a, b) => b.at - a.at);
   const box = $("events"); box.replaceChildren();

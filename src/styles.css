@@ -597,9 +597,71 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 999px; font-size: 14px; z-index: 30;
 }
+/* ---------- modal (user list) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 18, 22, .45);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal {
+  width: min(480px, 100%);
+  max-height: 80vh;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: grid;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.modal-header h3 { font-size: 18px; font-weight: 700; }
+.modal-close {
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: var(--ink); }
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.user-item:last-child { margin-bottom: 0; }
+.user-name { font-weight: 600; }
+.user-remove { flex-shrink: 0; }
+.empty { border: 2px dashed var(--line); border-radius: 12px; padding: 36px 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
+.empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 18px; margin-bottom: 4px; }
+
 @media (prefers-reduced-motion: no-preference) {
   .card { transition: border-color .15s, transform .15s; }
   .card:hover { transform: translateY(-2px); }
   .sheet { animation: slide .2s ease-out; }
   @keyframes slide { from { transform: translateX(24px); opacity: .6; } }
+  .modal-overlay { animation: fadeIn .15s ease-out; }
+  .modal { animation: slideUp .2s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } }
 }
