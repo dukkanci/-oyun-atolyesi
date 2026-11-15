@@ -174,15 +174,9 @@ async function write(fn, errEl) {
 
 async function boot() {
   const use = window.claude && window.claude.use;
-  const [db, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("assets")]) : [null, null];
+  const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
   if (!db) { show("s-noaccess"); return; }
-  S.db = db; S.assets = assets;
-
-  // startPresence();  // Ping/dürt özelliği kapalı (406 hatası önlemi)
-  if (!assets) {
-    $("nw-filebtn").hidden = true;
-    $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
-  }
+  S.db = db; S.user = user; S.assets = assets;
 
   // Check for stored username
   const storedUsername = ls.get(LS_USERNAME);
