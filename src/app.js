@@ -1335,8 +1335,12 @@ $("btn-logout").addEventListener("click", async () => {
   route();
 });
 
-$("btn-user-list").addEventListener("click", () => {
-  showUserListModal();
+// Kullanıcı Listesi butonu - event delegation ile (buton DOM'da olmasa bile çalışır)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#btn-user-list");
+  if (btn) {
+    showUserListModal();
+  }
 });
 
 function showUserListModal() {
