@@ -1341,6 +1341,116 @@ $("btn-logout").addEventListener("click", async () => {
   route();
 });
 
+$("btn-user-list").addEventListener("click", () => {
+  showUserListModal();
+});
+
+function showUserListModal() {
+  // Mevcut kullanıcıları topla
+  const users = [];
+
+  // Mevcut kullanıcı
+  if (S.meId) {
+    users.push({
+      id: S.meId,
+      name: S.username || "Sen",
+      isCurrent: true
+    });
+  }
+
+  // Diğer kullanıcılar (profiles'den)
+  for (const [id, profile] of Object.entries(S.profiles)) {
+    if (id !== S.meId) {
+      users.push({
+        id,
+        name: profile.name || "Arkadaşın",
+        isCurrent: false
+      });
+    }
+  }
+
+  // LocalStorage'dan bilinen kullanıcıları da ekle (profiles'de olmayabilir)
+  const storedUsername = ls.get(LS_USERNAME);
+  const storedMeId = ls.get("atolye-meid");
+
+  // Modal oluştur
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Kullanıcı Listesi</h3>
+        <button class="modal-close" aria-label="Kapat">×</button>
+      </div>
+      <div class="modal-body">
+        ${users.length === 0
+          ? '<p class="empty">Henüz kullanıcı yok.</p>'
+          : users.map(u => `
+            <div class="user-item" data-id="${u.id}">
+              <span class="user-name">${u.name}${u.isCurrent ? ' (Sen)' : ''}</span>
+              ${!u.isCurrent ? `<button class="btn danger btn-sm user-remove" data-id="${u.id}" title="Kullanıcıyı çıkar">Çıkar</button>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Kapatma olayları
+  modal.querySelector(".modal-close").addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+  // Çıkarma butonları
+  modal.querySelectorAll(".user-remove").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const userId = e.target.dataset.id;
+      if (confirm("Bu kullanıcıyı çıkarmak istediğinizden emin misiniz?")) {
+        await removeUser(userId);
+        modal.remove();
+        showUserListModal(); // Listeyi yenile
+      }
+    });
+  });
+
+  // ESC tuşu ile kapatma
+  const handleEsc = (e) => {
+    if (e.key === "Escape") {
+      modal.remove();
+      document.removeEventListener("keydown", handleEsc);
+    }
+  };
+  document.addEventListener("keydown", handleEsc);
+}
+
+async function removeUser(userId) {
+  try {
+    // LocalStorage'dan sil
+    if (S.meId === userId) {
+      ls.del(LS_USERNAME);
+      ls.del("atolye-meid");
+      S.meId = null;
+      S.username = null;
+      S.canWrite = false;
+    }
+
+    // Profiles'den sil
+    delete S.profiles[userId];
+
+    // Firestore'dan sil
+    await S.db.doc("users/" + userId).delete().catch(() => {});
+
+    // Pings tablosundan da sil
+    await S.db.doc("pings/" + userId).delete().catch(() => {});
+
+    toast("Kullanıcı çıkarıldı");
+  } catch (e) {
+    console.error("Kullanıcı çıkarma hatası:", e);
+    toast("Kullanıcı çıkarılamadı: " + e.message);
+  }
+}
+
 /* ---------- images ---------- */
 const IMG_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const VID_TYPES = ["video/mp4", "video/webm"];
