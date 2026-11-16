@@ -1,10 +1,20 @@
-// Oyun Atölyesi — Yerel localStorage Backend (Supabase yerine, CDN bağımlılığı yok)
-// Bu dosya Supabase yerine tamamen localStorage tabanlı bir backend sağlar.
+// Oyun Atölyesi — Supabase Wrapper (Basit username-only sistem, GitHub Pages uyumlu, hata toleranslı, 503 retry)
 
 (function() {
   'use strict';
 
-  // Helper functions
+  var SUPABASE_URL = 'https://etwapxyqqelvexqzfrjw.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_bM2BVsg6nz2wW1BABCS8rw_0CuCF64L';
+  var CDN_URLS = [
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js'
+  ];
+
+  var supabaseClient = null;
+  var initPromise = null;
+  var realtimeChannels = {};
+
   function uuid() {
     return crypto.randomUUID();
   }
@@ -21,106 +31,103 @@
     return result;
   }
 
-  function fromSnakeCase(obj) {
-    if (!obj || typeof obj !== 'object') return obj;
-    var result = {};
-    for (var k in obj) {
-      if (!obj.hasOwnProperty(k)) continue;
-      var camelKey = k.replace(/_([a-z])/g, function(_, letter) { return letter.toUpperCase(); });
-      var val = obj[k];
-      result[camelKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? fromSnakeCase(val) : val;
-    }
-    return result;
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
   }
 
-  // localStorage wrapper
-  var STORAGE_PREFIX = 'supabase_';
-  var COLLECTION_PREFIX = STORAGE_PREFIX + 'collection_';
-  var DOC_PREFIX = STORAGE_PREFIX + 'doc_';
-  var STORAGE_PREFIX_ASSETS = STORAGE_PREFIX + 'assets_';
-
-  function getStorageKey(type, name) {
-    if (type === 'collection') return COLLECTION_PREFIX + name;
-    if (type === 'doc') return DOC_PREFIX + name;
-    if (type === 'assets') return STORAGE_PREFIX_ASSETS + name;
-    return STORAGE_PREFIX + name;
+  function fetchWithRetry(url, options, retries, delay) {
+    return fetch(url, options).then(function(response) {
+      if (response.status === 503 && retries > 0) {
+        return sleep(delay).then(function() { return fetchWithRetry(url, options, retries - 1, delay * 2); });
+      }
+      return response;
+    });
   }
 
-  function getCollection(name) {
-    var key = getStorageKey('collection', name);
+  function loadSupabaseSDK() {
+    return new Promise(function(resolve, reject) {
+      if (window.supabase && window.supabase.createClient) {
+        resolve();
+        return;
+      }
+      var currentIndex = 0;
+      function loadNext() {
+        if (currentIndex >= CDN_URLS.length) {
+          reject(new Error('Tüm CDN\'ler yüklenemedi'));
+          return;
+        }
+        var script = document.createElement('script');
+        script.src = CDN_URLS[currentIndex];
+        script.crossOrigin = 'anonymous';
+        script.onload = function() {
+          if (window.supabase && window.supabase.createClient) {
+            resolve();
+          } else {
+            currentIndex++;
+            loadNext();
+          }
+        };
+        script.onerror = function() {
+          currentIndex++;
+          loadNext();
+        };
+        document.head.appendChild(script);
+      }
+      loadNext();
+    });
+  }
+
+  function initSupabase() {
+    return loadSupabaseSDK().then(function() {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        db: { schema: 'public' },
+        global: { headers: { 'x-client-info': 'oyun-atolyesi' } }
+      });
+      console.log('%c[Oyun Atölyesi] Supabase mod aktif (basit username-only, real-time)', 'color: #3ECF8E; font-weight: bold');
+      return true;
+    }).catch(function(e) {
+      console.error('[Oyun Atölyesi] Supabase SDK yükleme hatası:', e);
+      showError(e.message);
+      return false;
+    });
+  }
+
+  function showError(message) {
+    var errDiv = document.createElement('div');
+    errDiv.style.cssText = 'position:fixed;top:10px;right:10px;background:#fee;padding:10px;border:1px solid #f88;border-radius:8px;max-width:400px;z-index:9999;font-family:monospace;font-size:12px;color:#c00';
+    errDiv.innerHTML = '<b>Supabase bağlantı hatası:</b><br>' + message + '<br><br><small>Supabase Dashboard → Authentication → URL Configuration → Site URL ve Redirect URLs\'e <code>https://dukkanci.github.io/-oyun-atolyesi/efsane-proje/</code> ekleyin.</small>';
+    document.body.appendChild(errDiv);
+  }
+
+  function uuid() {
+    return crypto.randomUUID();
+  }
+
+  function withRetry(promiseFn, retries, delay) {
     try {
-      var data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : {};
-    } catch (e) {
-      return {};
+      var result = promiseFn();
+      if (!result || typeof result.then !== 'function' || typeof result.catch !== 'function') {
+        return Promise.resolve(result).then(function(val) {
+          return val;
+        }).catch(function(err) {
+          return handleRetry(err);
+        });
+      }
+      return result.catch(function(err) {
+        return handleRetry(err);
+      });
+    } catch (syncErr) {
+      return Promise.reject(syncErr);
+    }
+
+    function handleRetry(err) {
+      if (retries > 0 && err && err.message && (err.message.indexOf('503') !== -1 || err.message.indexOf('Service Unavailable') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
+        return sleep(delay).then(function() { return withRetry(promiseFn, retries - 1, delay * 2); });
+      }
+      throw err;
     }
   }
 
-  function setCollection(name, data) {
-    var key = getStorageKey('collection', name);
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error('localStorage yazma hatası:', e);
-    }
-  }
-
-  function getDoc(name, id) {
-    var key = getStorageKey('doc', name + '_' + id);
-    try {
-      var data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setDoc(name, id, data) {
-    var key = getStorageKey('doc', name + '_' + id);
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error('localStorage yazma hatası:', e);
-    }
-  }
-
-  function deleteDoc(name, id) {
-    var key = getStorageKey('doc', name + '_' + id);
-    try {
-      localStorage.removeItem(key);
-    } catch (e) {}
-  }
-
-  function getAllDocs(name) {
-    var collection = getCollection(name);
-    var ids = Object.keys(collection);
-    var docs = {};
-    for (var i = 0; i < ids.length; i++) {
-      var doc = getDoc(name, ids[i]);
-      if (doc) docs[ids[i]] = doc;
-    }
-    return docs;
-  }
-
-  // Simple event system for real-time-ish updates
-  var listeners = {};
-
-  function notifyChange(tableName) {
-    if (listeners[tableName]) {
-      listeners[tableName].forEach(function(cb) { cb(); });
-    }
-  }
-
-  function subscribe(tableName, callback) {
-    if (!listeners[tableName]) listeners[tableName] = [];
-    listeners[tableName].push(callback);
-    return function() {
-      var idx = listeners[tableName].indexOf(callback);
-      if (idx > -1) listeners[tableName].splice(idx, 1);
-    };
-  }
-
-  // Mock Collection (localStorage-based)
   function createMockCollection(tableName) {
     return {
       tableName: tableName,
@@ -133,53 +140,39 @@
       limit: function(n) { this._limit = n; return this; },
       add: function(data) {
         var id = uuid();
-        var now = new Date().toISOString();
-        var docData = { id: id, ...data, createdAt: data.createdAt || now, updatedAt: now };
+        var docData = { id: id };
+        for (var k in data) docData[k] = data[k];
+        if (!docData.createdAt) docData.createdAt = new Date().toISOString();
         var snakeData = toSnakeCase(docData);
-        setDoc(tableName, id, snakeData);
-        var collection = getCollection(tableName);
-        collection[id] = true;
-        setCollection(tableName, collection);
-        notifyChange(tableName);
-        return Promise.resolve({ id: id });
+        return withRetry(function() {
+          return supabaseClient.from(this.tableName).insert(snakeData);
+        }.bind(this), 3, 500).then(function(r) { if (r.error) throw r.error; return { id: id }; });
       },
       onSnapshot: function(onNext, onError) {
         var self = this;
         function runQuery() {
-          var docs = getAllDocs(self.tableName);
-          var results = Object.values(docs).map(function(d) { return fromSnakeCase(d); });
-
-          // Apply where filter
+          var query = supabaseClient.from(self.tableName).select('*');
           for (var field in self._query) {
             var q = self._query[field];
-            if (q.op === '==') {
-              results = results.filter(function(d) { return d[field] === q.value; });
-            }
+            var snakeField = field.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); });
+            if (q.op === '==') query = query.eq(snakeField, q.value);
           }
-
-          // Apply orderBy
-          if (self._orderBy) {
-            var f = self._orderBy.field;
-            var asc = self._orderBy.dir === 'asc';
-            results.sort(function(a, b) {
-              var av = a[f], bv = b[f];
-              if (av === bv) return 0;
-              return (av < bv ? -1 : 1) * (asc ? 1 : -1);
-            });
-          }
-
-          // Apply limit
-          if (self._limit) results = results.slice(0, self._limit);
-
-          var docsArray = results.map(function(d) {
-            return { id: d.id, data: function() { return d; }, exists: true };
+          if (self._orderBy) query = query.order(self._orderBy.field.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); }), { ascending: self._orderBy.dir === 'asc' });
+          if (self._limit) query = query.limit(self._limit);
+          query.then(function(r) {
+            if (r.error) { onError && onError(r.error); return; }
+            var docs = (r.data || []).map(function(d) { return { id: d.id, data: function() { return d; }, exists: true }; });
+            onNext({ docs: docs, empty: docs.length === 0 });
           });
-          onNext({ docs: docsArray, empty: docsArray.length === 0 });
         }
-
         runQuery();
-        var unsubscribe = subscribe(self.tableName, runQuery);
-        return function() { unsubscribe(); };
+        var channelKey = 'realtime:' + self.tableName;
+        if (!realtimeChannels[channelKey]) {
+          var channel = supabaseClient.channel(channelKey).on('postgres_changes', { event: '*', schema: 'public', table: self.tableName }, runQuery);
+          channel.subscribe();
+          realtimeChannels[channelKey] = channel;
+        }
+        return function() { /* keep channel alive for other listeners */ };
       }
     };
   }
@@ -189,53 +182,44 @@
       tableName: tableName,
       id: id,
       get: function() {
-        var data = getDoc(tableName, id);
-        return Promise.resolve({
-          exists: !!data,
-          data: data ? function() { return fromSnakeCase(data); } : function() { return null; },
-          id: id
+        return withRetry(function() {
+          return supabaseClient.from(tableName).select('*').eq('id', id).single();
+        }, 3, 500).then(function(r) {
+          if (r.error && r.error.code !== 'PGRST116') throw r.error;
+          return { exists: !!r.data, data: function() { return r.data; }, id: id };
         });
       },
       set: function(data) {
         var newData = { id: id };
         for (var k in data) newData[k] = data[k];
         var snakeData = toSnakeCase(newData);
-        setDoc(tableName, id, snakeData);
-        var collection = getCollection(tableName);
-        collection[id] = true;
-        setCollection(tableName, collection);
-        notifyChange(tableName);
-        return Promise.resolve();
+        return withRetry(function() {
+          return supabaseClient.from(tableName).upsert(snakeData, { returning: 'representation' });
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       update: function(data) {
         var snakeData = toSnakeCase(data);
-        var existing = getDoc(tableName, id) || {};
-        var merged = Object.assign({}, existing, snakeData);
-        setDoc(tableName, id, merged);
-        notifyChange(tableName);
-        return Promise.resolve();
+        return withRetry(function() {
+          return supabaseClient.from(tableName).update(snakeData).eq('id', id);
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       delete: function() {
-        deleteDoc(tableName, id);
-        var collection = getCollection(tableName);
-        delete collection[id];
-        setCollection(tableName, collection);
-        notifyChange(tableName);
-        return Promise.resolve();
+        return withRetry(function() {
+          return supabaseClient.from(tableName).delete().eq('id', id);
+        }, 3, 500).then(function(r) { if (r.error) throw r.error; });
       },
       onSnapshot: function(onNext, onError) {
-        var self = this;
-        function runQuery() {
-          var data = getDoc(self.tableName, self.id);
-          onNext({
-            exists: !!data,
-            data: data ? function() { return fromSnakeCase(data); } : function() { return null; },
-            id: self.id
+        var channelKey = 'realtime:' + tableName + ':' + id;
+        if (!realtimeChannels[channelKey]) {
+          var channel = supabaseClient.channel('realtime:' + tableName + ':' + id).on('postgres_changes', { event: '*', schema: 'public', table: tableName, filter: 'id=eq.' + id }, function(payload) {
+            if (payload.eventType === 'DELETE') onNext({ exists: false, data: function() { return null; }, id: id });
+            else onNext({ exists: true, data: function() { return payload.new; }, id: id });
           });
+          channel.subscribe();
+          realtimeChannels[channelKey] = channel;
         }
-        runQuery();
-        var unsubscribe = subscribe(self.tableName, runQuery);
-        return function() { unsubscribe(); };
+        supabaseClient.from(tableName).select('*').eq('id', id).single().then(onNext).catch(onError);
+        return function() { /* keep channel alive */ };
       }
     };
   }
@@ -245,66 +229,46 @@
       upload: function(file, options) {
         var id = uuid();
         var type = (options && options.type) || file.type;
-        return new Promise(function(resolve, reject) {
-          var reader = new FileReader();
-          reader.onload = function() {
-            try {
-              var assetData = {
-                id: id,
-                data: reader.result,
-                type: type,
-                size: file.size,
-                name: file.name,
-                uploadedAt: new Date().toISOString()
-              };
-              var key = STORAGE_PREFIX_ASSETS + id;
-              localStorage.setItem(key, JSON.stringify(assetData));
-              resolve({ id: id });
-            } catch (e) {
-              reject(e);
-            }
-          };
-          reader.onerror = function() { reject(new Error('Dosya okunamadı')); };
-          reader.readAsDataURL(file);
+        return supabaseClient.storage.from('assets').upload(id, file, { contentType: type, upsert: false }).then(function(r) {
+          if (r.error) throw r.error;
+          var publicUrlData = supabaseClient.storage.from('assets').getPublicUrl(id);
+          var snakeData = toSnakeCase({ id: id, url: publicUrlData.data.publicUrl, type: type, size: file.size, name: file.name });
+          return supabaseClient.from('assets').upsert(snakeData, { returning: 'representation' }).then(function() { return { id: id }; });
         });
       },
       delete: function(id) {
-        var key = STORAGE_PREFIX_ASSETS + id;
-        localStorage.removeItem(key);
-        return Promise.resolve();
+        return supabaseClient.storage.from('assets').remove([id]).then(function() {
+          return supabaseClient.from('assets').delete().eq('id', id);
+        });
       },
       getUrl: function(id) {
-        var key = STORAGE_PREFIX_ASSETS + id;
-        var data = localStorage.getItem(key);
-        if (data) {
-          var asset = JSON.parse(data);
-          return Promise.resolve(asset.data);
-        }
-        return Promise.resolve('/_blob/' + id);
+        return supabaseClient.from('assets').select('url').eq('id', id).single().then(function(r) {
+          if (r.data && r.data.url) return r.data.url;
+          var publicUrlData = supabaseClient.storage.from('assets').getPublicUrl(id);
+          return publicUrlData.data.publicUrl;
+        });
       }
     };
   }
 
-  // Expose localStorage backend via window.claude.use
-  // This is the primary backend - no CDN, no external dependencies
   window.claude = window.claude || {};
   window.claude.use = function(name) {
-    switch (name) {
-      case 'db':
-        return Promise.resolve({
-          collection: createMockCollection,
-          doc: function(path) {
-            var parts = path.split('/');
-            return createMockDoc(parts[0], parts[1]);
-          }
-        });
-      case 'assets':
-        return Promise.resolve(createMockAssets());
-      default:
-        return Promise.resolve(null);
+    if (!supabaseClient) {
+      if (!initPromise) initPromise = initSupabase();
+      return initPromise.then(function(ok) { return ok ? getService(name) : null; });
     }
+    return Promise.resolve(getService(name));
   };
 
-  // No auto-initialization, no CDN loading
-  console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
+  function getService(name) {
+    switch (name) {
+      case 'db': return { collection: createMockCollection, doc: function(path) { var parts = path.split('/'); return createMockDoc(parts[0], parts[1]); } };
+      case 'assets': return createMockAssets();
+      default: return null;
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    initPromise = initSupabase();
+  }
 })();
