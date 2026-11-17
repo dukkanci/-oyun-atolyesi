@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><base href="/-oyun-atolyesi/efsane-proje/"><meta name="build-version" content="2024-11-26-v6"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Oyun Atölyesi</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +23,7 @@
   --k-sanat: #b34a6a;   --k-sanat-bg: #f8e1e8;
   --k-gorev: #3f7d3a;   --k-gorev-bg: #e2f0df;
   --k-hata: #b8402f;    --k-hata-bg: #f8e0db;
+  --k-videolar: #6b46c1;   --k-videolar-bg: #efe8fa;
   --shadow: 0 1px 0 rgba(20, 42, 49, .06), 0 6px 18px -10px rgba(20, 42, 49, .25);
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
@@ -39,6 +40,7 @@
     --k-sanat: #e98fab;   --k-sanat-bg: #3a1f29;
     --k-gorev: #8fcd84;   --k-gorev-bg: #1d3320;
     --k-hata: #ef7d6a;    --k-hata-bg: #3b1d18;
+    --k-videolar: #a890f0;  --k-videolar-bg: #2d244a;
     --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 8px 22px -12px rgba(0, 0, 0, .7);
     color-scheme: dark;
   }
@@ -70,6 +72,7 @@
   --k-sanat: #d6337a;   --k-sanat-bg: #fde4ef;   --k-sanat-on: #ffffff;
   --k-gorev: #2e9445;   --k-gorev-bg: #e1f4e5;   --k-gorev-on: #ffffff;
   --k-hata: #d93a2b;    --k-hata-bg: #fde3e0;    --k-hata-on: #ffffff;
+  --k-videolar: #6b46c1;  --k-videolar-bg: #efe8fa; --k-videolar-on: #ffffff;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --k-fikir: #f5cc33;   --k-fikir-bg: #3a3210;   --k-fikir-on: #2b2000;
@@ -78,6 +81,7 @@
   --k-sanat: #f06aa6;   --k-sanat-bg: #3d1828;   --k-sanat-on: #2d0a1a;
   --k-gorev: #5cc876;   --k-gorev-bg: #15321d;   --k-gorev-on: #0a2412;
   --k-hata: #f26b5c;    --k-hata-bg: #3e1a16;    --k-hata-on: #2e0a06;
+  --k-videolar: #a890f0;  --k-videolar-bg: #2d244a; --k-videolar-on: #ffffff;
 } }
 :root[data-theme="dark"] {
   --k-fikir: #f5cc33;   --k-fikir-bg: #3a3210;   --k-fikir-on: #2b2000;
@@ -86,6 +90,7 @@
   --k-sanat: #f06aa6;   --k-sanat-bg: #3d1828;   --k-sanat-on: #2d0a1a;
   --k-gorev: #5cc876;   --k-gorev-bg: #15321d;   --k-gorev-on: #0a2412;
   --k-hata: #f26b5c;    --k-hata-bg: #3e1a16;    --k-hata-on: #2e0a06;
+  --k-videolar: #a890f0;  --k-videolar-bg: #2d244a; --k-videolar-on: #ffffff;
 }
 
 /* single black theme: overrides every token above, whatever the viewer's light/dark setting */
@@ -100,6 +105,7 @@
   --k-sanat: #ff74b1;   --k-sanat-bg: #34121f;   --k-sanat-on: #2a0716;
   --k-gorev: #5fdc80;   --k-gorev-bg: #0f2a17;   --k-gorev-on: #04170a;
   --k-hata: #ff6e5e;    --k-hata-bg: #35130f;    --k-hata-on: #250604;
+  --k-videolar: #c4b5fd;  --k-videolar-bg: #312454; --k-videolar-on: #ffffff;
   --u1: #7cabff; --u2: #ff9d5e; --u3: #cc9eff; --u4: #4fe3b2; --u5: #ff82b3;
   --shadow: 0 1px 0 rgba(0, 0, 0, .5), 0 10px 26px -12px rgba(0, 0, 0, .9);
 }
@@ -597,14 +603,75 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 999px; font-size: 14px; z-index: 30;
 }
+/* ---------- modal (user list) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 18, 22, .45);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal {
+  width: min(480px, 100%);
+  max-height: 80vh;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: grid;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.modal-header h3 { font-size: 18px; font-weight: 700; }
+.modal-close {
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: var(--ink); }
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.user-item:last-child { margin-bottom: 0; }
+.user-name { font-weight: 600; }
+.user-remove { flex-shrink: 0; }
+.empty { border: 2px dashed var(--line); border-radius: 12px; padding: 36px 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
+.empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 18px; margin-bottom: 4px; }
+
 @media (prefers-reduced-motion: no-preference) {
   .card { transition: border-color .15s, transform .15s; }
   .card:hover { transform: translateY(-2px); }
   .sheet { animation: slide .2s ease-out; }
   @keyframes slide { from { transform: translateX(24px); opacity: .6; } }
+  .modal-overlay { animation: fadeIn .15s ease-out; }
+  .modal { animation: slideUp .2s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } }
 }
 </style>
-
 <!-- loading -->
 <section id="s-loading" class="gate">
   <div class="gate-card"><span class="label">Oyun Atölyesi</span><p>Atölye açılıyor…</p></div>
@@ -614,25 +681,23 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 <section id="s-noaccess" class="gate" hidden>
   <div class="gate-card">
     <h1>Atölyeye ulaşılamıyor</h1>
-    <p>Bu sayfa notları claude.ai üzerinde saklar. Görmek için claude.ai hesabınla giriş yapmış olman ve sayfanın sahibinin seni davet etmiş olması gerekiyor.</p>
+    <p>Bu sayfa yerel modda çalışıyor. Veriler tarayıcınızda saklanır.</p>
   </div>
 </section>
 
-<!-- first-time setup -->
-<section id="s-setup" class="gate" hidden>
+<!-- username login -->
+<section id="s-login" class="gate" hidden>
   <div class="gate-card">
     <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
-    <h1>Atölyeyi kur</h1>
-    <p>Oyununuza bir çalışma adı verin ve ikinizin kullanacağı ekip şifresini belirleyin. Şifreyi arkadaşına sen söyleyeceksin.</p>
-    <form id="f-setup">
-      <label class="label" for="su-game">Oyunun çalışma adı</label>
-      <input class="field" id="su-game" required maxlength="60" placeholder="ör. Proje Fener">
-      <label class="label" for="su-pass">Ekip şifresi</label>
-      <input class="field" id="su-pass" type="password" required minlength="4" autocomplete="new-password">
-      <label class="label" for="su-pass2">Şifre tekrar</label>
-      <input class="field" id="su-pass2" type="password" required minlength="4" autocomplete="new-password">
-      <p class="err" id="su-err"></p>
-      <button class="btn primary" type="submit">Atölyeyi aç</button>
+    <h1>Oyun Atölyesi</h1>
+    <p>Kullanıcı adınızı girip atölyeye girin.</p>
+    <form id="f-login">
+      <label class="label" for="lg-username">Kullanıcı adı</label>
+      <input class="field" id="lg-username" required maxlength="30" placeholder="ör. oyuncu1" autocomplete="username">
+      <label class="label" for="lg-game">Oyun adı (ilk girişte)</label>
+      <input class="field" id="lg-game" maxlength="60" placeholder="ör. Proje Fener">
+      <p class="err" id="lg-err"></p>
+      <button class="btn primary" type="submit">Atölyeye gir</button>
     </form>
   </div>
 </section>
@@ -641,22 +706,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 <section id="s-wait" class="gate" hidden>
   <div class="gate-card">
     <h1>Atölye henüz kurulmadı</h1>
-    <p>Sayfanın sahibi önce oyun adını ve ekip şifresini belirlemeli. Kurulum bitince bu ekran kendiliğinden giriş ekranına döner.</p>
-  </div>
-</section>
-
-<!-- lock -->
-<section id="s-lock" class="gate" hidden>
-  <div class="gate-card">
-    <div class="gate-mark"><span style="background:var(--k-fikir)"></span><span style="background:var(--k-mekanik)"></span><span style="background:var(--k-hikaye)"></span><span style="background:var(--k-sanat)"></span></div>
-    <span class="label">Oyun Atölyesi</span>
-    <h1 id="lock-game">—</h1>
-    <form id="f-lock">
-      <label class="label" for="lk-pass">Ekip şifresi</label>
-      <input class="field" id="lk-pass" type="password" required autocomplete="current-password">
-      <p class="err" id="lk-err"></p>
-      <button class="btn primary" type="submit">Giriş yap</button>
-    </form>
+    <p>Sayfanın sahibi önce oyun adını belirlemeli. Kurulum bitince bu ekran kendiliğinden giriş ekranına döner.</p>
   </div>
 </section>
 
@@ -683,21 +733,35 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
             <input class="field" id="st-game" maxlength="60" required>
             <button class="btn" type="submit">Adı kaydet</button>
           </form>
-          <form id="f-pass" style="display:grid;gap:8px">
-            <label class="label" for="st-pass">Yeni ekip şifresi</label>
-            <input class="field" id="st-pass" type="password" minlength="4" required autocomplete="new-password">
-            <button class="btn" type="submit">Şifreyi değiştir</button>
-            <span class="hint">Değişince arkadaşın yeni şifreyle tekrar giriş yapar.</span>
-          </form>
+          <div style="display:grid;gap:6px">
+            <span class="label">Proje linki (arkadaşına gönder)</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <code id="inv-link-value" style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--f-mono);font-size:13px;word-break:break-all"></code>
+              <button class="btn" type="button" id="btn-copy-invite" title="Kopyala">Kopyala</button>
+            </div>
+            <span class="hint">Bu linki arkadaşına gönder. O giriş yapıp atölyeye girecek.</span>
+          </div>
           <div style="display:grid;gap:6px">
             <span class="label">Profil fotoğrafın</span>
             <div class="kinds" id="av-list"></div>
           </div>
           <div style="display:grid;gap:6px">
+            <span class="label">Hesap</span>
+            <button class="btn danger" id="btn-logout" type="button">Çıkış yap</button>
+          </div>
+          <div style="display:grid;gap:6px">
+            <span class="label">Kullanıcılar</span>
+            <button class="btn" id="btn-user-list" type="button">Kullanıcı Listesi</button>
+          </div>
+          <div style="display:grid;gap:6px">
             <span class="label">Bildirim seslerini dinle</span>
             <div class="kinds" id="snd-list"></div>
           </div>
-          <button class="btn danger" id="btn-lock">Kilitle ve çık</button>
+          <form id="f-publish" style="display:grid;gap:8px">
+            <span class="label">Artifact'ı güncelle</span>
+            <p class="hint">Yerel geliştirme için: <code>node build.js</code> → <code>dist/index.html</code> oluşur.</p>
+            <button class="btn" type="button" id="btn-publish" onclick="publishArtifact()">Artifact'ı Güncelle</button>
+          </form>
         </div>
       </div>
     </div>
@@ -843,355 +907,699 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 <div id="sheet-root"></div>
 <div class="toast" id="toast" hidden></div>
 <div class="notifs" id="notifs" aria-live="polite"></div>
-<div class="pingbar" id="pingbar" role="alert" hidden></div>
-
-<script>
-// Oyun Atölyesi — Yerel Geliştirme Mock'u (localStorage tabanlı)
+<div class="pingbar" id="pingbar" role="alert" hidden></div><script>
+// Oyun Atölyesi — Bağımsız HTML Mock'u (localStorage tabanlı)
 // claude.ai Artifact API'sini (S.db, S.user, S.assets, S.room) taklit eder.
-// Sadece development'ta yüklenir; production build'e girmez.
+// Eğer gerçek claude.ai ortamı varsa (window.claude.use mevcutsa) mock DEVRE DİŞI kalır.
+// Bu mock her build'de (production + dev) dahil edilir; gerçek ortamda devre dışı kalır.
 
 (function() {
   'use strict';
 
-  // --- Yardımcılar ---
-  const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+  // Gerçek claude.ai ortamı var mı kontrol et
+  const hasRealClaude = window.claude && typeof window.claude.use === 'function';
 
-  const now = () => Date.now();
-
-  // localStorage wrapper
-  const ls = {
-    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
-    del(k) { try { localStorage.removeItem(k); } catch {} },
-    keys(prefix = '') {
-      try {
-        return Object.keys(localStorage).filter(k => k.startsWith(prefix));
-      } catch { return []; }
-    }
-  };
-
-  // Collection prefix: "atolye-db-{collection}-"
-  const COLLECTION_PREFIX = 'atolye-db-';
-
-  function getCollectionStore(name) {
-    const prefix = COLLECTION_PREFIX + name + '-';
-    const keys = ls.keys(prefix);
-    const docs = {};
-    for (const key of keys) {
-      const id = key.slice(prefix.length);
-      try {
-        docs[id] = JSON.parse(ls.get(key));
-      } catch {}
-    }
-    return docs;
+  // Gerçek ortam varsa mock'u devre dışı bırak
+  if (hasRealClaude) {
+    console.log('%c[Oyun Atölyesi] Gerçek claude.ai ortamı tespit edildi - Mock devre dışı', 'color: #2196F3; font-weight: bold');
+    // window.claude zaten gerçek API'yi sağlıyor, mock'a gerek yok
+  } else {
+    // Mock'u başlat
+    initMock();
   }
 
-  function setCollectionDoc(name, id, data) {
-    const key = COLLECTION_PREFIX + name + '-' + id;
-    ls.set(key, JSON.stringify({ ...data, id }));
-    notifyChange(name);
-  }
+  function initMock() {
+    'use strict';
 
-  function delCollectionDoc(name, id) {
-    const key = COLLECTION_PREFIX + name + '-' + id;
-    ls.del(key);
-    notifyChange(name);
-  }
+    // --- Yardımcılar ---
+    const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
 
-  function notifyChange(store) {
-    window.dispatchEvent(new CustomEvent('atolye-db-change', { detail: { store } }));
-  }
+    const now = () => Date.now();
 
-  // --- Mock Database API ---
-  class MockCollection {
-    constructor(name) {
-      this.name = name;
-      this._query = {};
-      this._orderBy = null;
-      this._limit = null;
+    // localStorage wrapper
+    const ls = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+      del(k) { try { localStorage.removeItem(k); } catch {} },
+      keys(prefix = '') {
+        try {
+          return Object.keys(localStorage).filter(k => k.startsWith(prefix));
+        } catch { return []; }
+      }
+    };
+
+    // Collection prefix: "atolye-db-{collection}-"
+    const COLLECTION_PREFIX = 'atolye-db-';
+
+    function getCollectionStore(name) {
+      const prefix = COLLECTION_PREFIX + name + '-';
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
+      const docs = {};
+      for (const key of keys) {
+        const id = key.slice(prefix.length);
+        try {
+          docs[id] = JSON.parse(localStorage.getItem(key));
+        } catch {}
+      }
+      return docs;
     }
 
-    doc(id) {
-      return new MockDoc(this.name, id);
+    function setCollectionDoc(name, id, data) {
+      const key = COLLECTION_PREFIX + name + '-' + id;
+      localStorage.setItem(key, JSON.stringify({ ...data, id }));
+      notifyChange(name);
     }
 
-    where(field, op, value) {
-      this._query[field] = { op, value };
-      return this;
+    function delCollectionDoc(name, id) {
+      const key = COLLECTION_PREFIX + name + '-' + id;
+      localStorage.removeItem(key);
+      notifyChange(name);
     }
 
-    orderBy(field, dir = 'asc') {
-      this._orderBy = { field, dir };
-      return this;
+    function notifyChange(store) {
+      window.dispatchEvent(new CustomEvent('atolye-db-change', { detail: { store } }));
     }
 
-    limit(n) {
-      this._limit = n;
-      return this;
-    }
+    // --- Mock Database API ---
+    class MockCollection {
+      constructor(name) {
+        this.name = name;
+        this._query = {};
+        this._orderBy = null;
+        this._limit = null;
+      }
 
-    add(data) {
-      const id = uuid();
-      const doc = { id, ...data, createdAt: data.createdAt || now() };
-      setCollectionDoc(this.name, id, doc);
-      return Promise.resolve({ id });
-    }
+      doc(id) {
+        return new MockDoc(this.name, id);
+      }
 
-    onSnapshot(onNext, onError) {
-      let unsubscribed = false;
+      where(field, op, value) {
+        this._query[field] = { op, value };
+        return this;
+      }
 
-      const runQuery = () => {
-        if (unsubscribed) return;
-        const docs = getCollectionStore(this.name);
-        let results = Object.values(docs);
+      orderBy(field, dir = 'asc') {
+        this._orderBy = { field, dir };
+        return this;
+      }
 
-        // where filtresi
-        for (const [field, { op, value }] of Object.entries(this._query)) {
-          if (op === '==') results = results.filter(d => d[field] === value);
-        }
+      limit(n) {
+        this._limit = n;
+        return this;
+      }
 
-        // orderBy
-        if (this._orderBy) {
-          const { field, dir } = this._orderBy;
-          results.sort((a, b) => {
-            const av = a[field], bv = b[field];
-            if (av === bv) return 0;
-            const cmp = av < bv ? -1 : 1;
-            return dir === 'desc' ? -cmp : cmp;
+      add(data) {
+        const id = uuid();
+        const doc = { id, ...data, createdAt: data.createdAt || now() };
+        setCollectionDoc(this.name, id, doc);
+        return Promise.resolve({ id });
+      }
+
+      onSnapshot(onNext, onError) {
+        let unsubscribed = false;
+
+        const runQuery = () => {
+          if (unsubscribed) return;
+          const docs = getCollectionStore(this.name);
+          let results = Object.values(docs);
+
+          // where filtresi
+          for (const [field, { op, value }] of Object.entries(this._query)) {
+            if (op === '==') results = results.filter(d => d[field] === value);
+          }
+
+          // orderBy
+          if (this._orderBy) {
+            const { field, dir } = this._orderBy;
+            results.sort((a, b) => {
+              const av = a[field], bv = b[field];
+              if (av === bv) return 0;
+              const cmp = av < bv ? -1 : 1;
+              return dir === 'desc' ? -cmp : cmp;
+            });
+          }
+
+          // limit
+          if (this._limit) results = results.slice(0, this._limit);
+
+          onNext({
+            docs: results.map(d => ({ id: d.id, data: () => d, exists: true })),
+            empty: results.length === 0
           });
-        }
+        };
 
-        // limit
-        if (this._limit) results = results.slice(0, this._limit);
+        // İlk çalıştırma
+        runQuery();
 
-        onNext({
-          docs: results.map(d => ({ id: d.id, data: () => d, exists: true })),
-          empty: results.length === 0
-        });
-      };
+        // Storage event listener for cross-tab sync
+        const storageHandler = e => {
+          if (e.key && e.key.startsWith('atolye-db-' + this.name)) runQuery();
+        };
+        window.addEventListener('storage', storageHandler);
 
-      // İlk çalıştırma
-      runQuery();
+        // Custom event for same-tab updates
+        const changeHandler = e => {
+          if (e.detail?.store === this.name) runQuery();
+        };
+        window.addEventListener('atolye-db-change', changeHandler);
 
-      // Storage event listener for cross-tab sync
-      const storageHandler = e => {
-        if (e.key && e.key.startsWith(COLLECTION_PREFIX + this.name)) runQuery();
-      };
-      window.addEventListener('storage', storageHandler);
-
-      // Custom event for same-tab updates
-      const changeHandler = e => {
-        if (e.detail?.store === this.name) runQuery();
-      };
-      window.addEventListener('atolye-db-change', changeHandler);
-
-      return () => {
-        unsubscribed = true;
-        window.removeEventListener('storage', storageHandler);
-        window.removeEventListener('atolye-db-change', changeHandler);
-      };
-    }
-  }
-
-  class MockDoc {
-    constructor(store, id) {
-      this.store = store;
-      this.id = id;
+        return () => {
+          unsubscribed = true;
+          window.removeEventListener('storage', storageHandler);
+          window.removeEventListener('atolye-db-change', changeHandler);
+        };
+      }
     }
 
-    get() {
-      const docs = getCollectionStore(this.store);
-      const data = docs[this.id];
-      return Promise.resolve({
-        exists: !!data,
-        data: () => data,
-        id: this.id
-      });
-    }
+    class MockDoc {
+      constructor(store, id) {
+        this.store = store;
+        this.id = id;
+      }
 
-    set(data) {
-      setCollectionDoc(this.store, this.id, { ...data, id: this.id });
-      return Promise.resolve();
-    }
-
-    update(data) {
-      const docs = getCollectionStore(this.store);
-      const existing = docs[this.id] || { id: this.id };
-      const updated = { ...existing, ...data };
-      setCollectionDoc(this.store, this.id, updated);
-      return Promise.resolve();
-    }
-
-    delete() {
-      delCollectionDoc(this.store, this.id);
-      return Promise.resolve();
-    }
-
-    onSnapshot(onNext, onError) {
-      let unsubscribed = false;
-
-      const runQuery = () => {
-        if (unsubscribed) return;
+      get() {
         const docs = getCollectionStore(this.store);
         const data = docs[this.id];
-        onNext({
+        return Promise.resolve({
           exists: !!data,
           data: () => data,
           id: this.id
         });
-      };
+      }
 
-      runQuery();
-      const storageHandler = e => {
-        if (e.key && e.key.startsWith(COLLECTION_PREFIX + this.store)) runQuery();
-      };
-      const changeHandler = e => {
-        if (e.detail?.store === this.store) runQuery();
-      };
-      window.addEventListener('storage', storageHandler);
-      window.addEventListener('atolye-db-change', changeHandler);
+      set(data) {
+        setCollectionDoc(this.store, this.id, { ...data, id: this.id });
+        return Promise.resolve();
+      }
 
-      return () => {
-        unsubscribed = true;
-        window.removeEventListener('storage', storageHandler);
-        window.removeEventListener('atolye-db-change', changeHandler);
-      };
+      update(data) {
+        const docs = getCollectionStore(this.store);
+        const existing = docs[this.id] || { id: this.id };
+        const updated = { ...existing, ...data };
+        setCollectionDoc(this.store, this.id, updated);
+        return Promise.resolve();
+      }
+
+      delete() {
+        delCollectionDoc(this.store, this.id);
+        return Promise.resolve();
+      }
+
+      onSnapshot(onNext, onError) {
+        let unsubscribed = false;
+
+        const runQuery = () => {
+          if (unsubscribed) return;
+          const docs = getCollectionStore(this.store);
+          const data = docs[this.id];
+          onNext({
+            exists: !!data,
+            data: () => data,
+            id: this.id
+          });
+        };
+
+        runQuery();
+        const storageHandler = e => {
+          if (e.key && e.key.startsWith(COLLECTION_PREFIX + this.store)) runQuery();
+        };
+        const changeHandler = e => {
+          if (e.detail?.store === this.store) runQuery();
+        };
+        window.addEventListener('storage', storageHandler);
+        window.addEventListener('atolye-db-change', changeHandler);
+
+        return () => {
+          unsubscribed = true;
+          window.removeEventListener('storage', storageHandler);
+          window.removeEventListener('atolye-db-change', changeHandler);
+        };
+      }
+    }
+
+    // --- Mock User API ---
+    const MOCK_USERS = {
+      'user-a': { id: 'user-a', name: 'Sen' },
+      'user-b': { id: 'user-b', name: 'Arkadaşın' }
+    };
+
+    let currentUserId = 'user-a';
+
+    const mockUser = {
+      me() {
+        return Promise.resolve({ id: currentUserId });
+      },
+      can(permission) {
+        return Promise.resolve(true); // Herkese yazma izni ver
+      },
+      profiles(ids) {
+        const result = {};
+        for (const id of ids) {
+          result[id] = MOCK_USERS[id] || { id, name: 'Bilinmeyen' };
+        }
+        return Promise.resolve(result);
+      },
+      // Debug: kullanıcı değiştirmek için
+      _setCurrentUser(id) {
+        currentUserId = id;
+      }
+    };
+
+    // --- Mock Assets API ---
+    const ASSET_PREFIX = 'atolye-asset-';
+
+    const mockAssets = {
+      async upload(file, options = {}) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const id = uuid();
+            const data = reader.result;
+            const type = options.type || file.type;
+            const size = file.size;
+
+            try {
+              localStorage.setItem('atolye-asset-' + id, JSON.stringify({ data, type, size, name: file.name }));
+            } catch (e) {
+              reject({ code: 'quota_or_state' });
+              return;
+            }
+
+            resolve({ id });
+          };
+          reader.onerror = () => reject({ code: 'unknown' });
+          reader.readAsDataURL(file);
+        });
+      },
+
+      async delete(id) {
+        localStorage.removeItem('atolye-asset-' + id);
+      },
+
+      getUrl(id) {
+        const stored = localStorage.getItem('atolye-asset-' + id);
+        if (stored) {
+          const { data } = JSON.parse(stored);
+          return data;
+        }
+        return '/_blob/' + id; // fallback
+      }
+    };
+
+    // --- Mock Room API (Presence) ---
+    const mockRoom = {
+      presence(data) {
+        return Promise.resolve();
+      },
+      peers() {
+        return Promise.resolve([]);
+      },
+      onPeers(cb) {
+        return () => {};
+      },
+      on(event, cb) {
+        return () => {};
+      },
+      emit(event, data) {
+        return Promise.resolve();
+      }
+    };
+
+    // --- Global claude.use mock ---
+    window.claude = window.claude || {};
+    window.claude.use = async (name) => {
+      switch (name) {
+        case 'db':
+          return {
+            collection: (name) => new MockCollection(name),
+            doc: (path) => {
+              const [store, id] = path.split('/');
+              return new MockDoc(store, id);
+            }
+          };
+        case 'user':
+          return mockUser;
+        case 'assets':
+          return mockAssets;
+        case 'room':
+          return mockRoom;
+        default:
+          return null;
+      }
+    };
+
+    // --- URL helper for assets ---
+    window.imgUrl = (id) => mockAssets.getUrl(id);
+
+    // --- Development mode indicator ---
+    console.log('%c[Oyun Atölyesi] Bağımsız mod aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
+    console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
+    console.log('Verileri temizlemek için: localStorage.clear()');
+  }
+
+  // Mock'u başlat (gerçek ortam yoksa)
+  if (typeof window !== 'undefined') {
+    // Sayfa yüklendiğinde kontrol et
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!window.claude || typeof window.claude.use !== 'function') {
+          initMock();
+        }
+      });
+    } else {
+      if (!window.claude || typeof window.claude.use !== 'function') {
+        initMock();
+      }
     }
   }
 
-  // --- Mock User API ---
-  const MOCK_USERS = {
-    'user-a': { id: 'user-a', name: 'Sen' },
-    'user-b': { id: 'user-b', name: 'Arkadaşın' }
-  };
+})();</script>
+<script>
+// Oyun Atölyesi — Yerel localStorage Backend (Supabase yerine, CDN bağımlılığı yok)
+// claude.ai Artifact API'sini (S.db, S.user, S.assets, S.room) taklit eder.
+// Bu dosya Supabase SDK'sını YÜKLEMEZ, tamamen localStorage tabanlı çalışır.
 
-  let currentUserId = 'user-a';
+(function() {
+  'use strict';
 
-  const mockUser = {
-    me() {
-      return Promise.resolve({ id: currentUserId });
-    },
-    can(permission) {
-      return Promise.resolve(true); // Herkese yazma izni ver
-    },
-    profiles(ids) {
-      const result = {};
-      for (const id of ids) {
-        result[id] = MOCK_USERS[id] || { id, name: 'Bilinmeyen' };
-      }
-      return Promise.resolve(result);
-    },
-    // Debug: kullanıcı değiştirmek için
-    _setCurrentUser(id) {
-      currentUserId = id;
+  // Helper functions
+  function uuid() {
+    return crypto.randomUUID();
+  }
+
+  function toSnakeCase(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var result = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k)) continue;
+      var snakeKey = k.replace(/[A-Z]/g, function(letter) { return '_' + letter.toLowerCase(); });
+      var val = obj[k];
+      result[snakeKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? toSnakeCase(val) : val;
     }
-  };
+    return result;
+  }
 
-  // --- Mock Assets API ---
-  const ASSET_PREFIX = 'atolye-asset-';
+  function fromSnakeCase(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var result = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k)) continue;
+      var camelKey = k.replace(/_([a-z])/g, function(_, letter) { return letter.toUpperCase(); });
+      var val = obj[k];
+      result[camelKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? fromSnakeCase(val) : val;
+    }
+    return result;
+  }
 
-  const mockAssets = {
-    async upload(file, options = {}) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const id = uuid();
-          const data = reader.result;
-          const type = options.type || file.type;
-          const size = file.size;
+  // localStorage wrapper
+  var STORAGE_PREFIX = 'supabase_';
+  var COLLECTION_PREFIX = STORAGE_PREFIX + 'collection_';
+  var DOC_PREFIX = STORAGE_PREFIX + 'doc_';
+  var STORAGE_PREFIX_ASSETS = STORAGE_PREFIX + 'assets_';
 
-          try {
-            ls.set(ASSET_PREFIX + id, JSON.stringify({ data, type, size, name: file.name }));
-          } catch (e) {
-            reject({ code: 'quota_or_state' });
-            return;
+  function getStorageKey(type, name) {
+    if (type === 'collection') return COLLECTION_PREFIX + name;
+    if (type === 'doc') return DOC_PREFIX + name;
+    if (type === 'assets') return STORAGE_PREFIX_ASSETS + name;
+    return STORAGE_PREFIX + name;
+  }
+
+  function getCollection(name) {
+    var key = getStorageKey('collection', name);
+    try {
+      var data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setCollection(name, data) {
+    var key = getStorageKey('collection', name);
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error('localStorage yazma hatası:', e);
+    }
+  }
+
+  function getDoc(name, id) {
+    var key = getStorageKey('doc', name + '_' + id);
+    try {
+      var data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setDoc(name, id, data) {
+    var key = getStorageKey('doc', name + '_' + id);
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error('localStorage yazma hatası:', e);
+    }
+  }
+
+  function deleteDoc(name, id) {
+    var key = getStorageKey('doc', name + '_' + id);
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  function getAllDocs(name) {
+    var collection = getCollection(name);
+    var ids = Object.keys(collection);
+    var docs = {};
+    for (var i = 0; i < ids.length; i++) {
+      var doc = getDoc(name, ids[i]);
+      if (doc) docs[ids[i]] = doc;
+    }
+    return docs;
+  }
+
+  // Simple event system for real-time-ish updates
+  var listeners = {};
+
+  function notifyChange(tableName) {
+    if (listeners[tableName]) {
+      listeners[tableName].forEach(function(cb) { cb(); });
+    }
+  }
+
+  function subscribe(tableName, callback) {
+    if (!listeners[tableName]) listeners[tableName] = [];
+    listeners[tableName].push(callback);
+    return function() {
+      var idx = listeners[tableName].indexOf(callback);
+      if (idx > -1) listeners[tableName].splice(idx, 1);
+    };
+  }
+
+  // Mock Collection (localStorage-based)
+  function createMockCollection(tableName) {
+    return {
+      tableName: tableName,
+      _query: {},
+      _orderBy: null,
+      _limit: null,
+      doc: function(id) { return createMockDoc(tableName, id); },
+      where: function(field, op, value) { this._query[field] = { op: op, value: value }; return this; },
+      orderBy: function(field, dir) { this._orderBy = { field: field, dir: dir || 'asc' }; return this; },
+      limit: function(n) { this._limit = n; return this; },
+      add: function(data) {
+        var id = uuid();
+        var now = new Date().toISOString();
+        var docData = { id: id, ...data, createdAt: data.createdAt || now, updatedAt: now };
+        var snakeData = toSnakeCase(docData);
+        setDoc(tableName, id, snakeData);
+        var collection = getCollection(tableName);
+        collection[id] = true;
+        setCollection(tableName, collection);
+        notifyChange(tableName);
+        return Promise.resolve({ id: id });
+      },
+      onSnapshot: function(onNext, onError) {
+        var self = this;
+        function runQuery() {
+          var docs = getAllDocs(self.tableName);
+          var results = Object.values(docs).map(function(d) { return fromSnakeCase(d); });
+
+          // Apply where filter
+          for (var field in self._query) {
+            var q = self._query[field];
+            if (q.op === '==') {
+              results = results.filter(function(d) { return d[field] === q.value; });
+            }
           }
 
-          resolve({ id });
-        };
-        reader.onerror = () => reject({ code: 'unknown' });
-        reader.readAsDataURL(file);
-      });
-    },
+          // Apply orderBy
+          if (self._orderBy) {
+            var f = self._orderBy.field;
+            var asc = self._orderBy.dir === 'asc';
+            results.sort(function(a, b) {
+              var av = a[f], bv = b[f];
+              if (av === bv) return 0;
+              return (av < bv ? -1 : 1) * (asc ? 1 : -1);
+            });
+          }
 
-    async delete(id) {
-      ls.del(ASSET_PREFIX + id);
-    },
+          // Apply limit
+          if (self._limit) results = results.slice(0, self._limit);
 
-    getUrl(id) {
-      const stored = ls.get(ASSET_PREFIX + id);
-      if (stored) {
-        const { data } = JSON.parse(stored);
-        return data;
+          var docsArray = results.map(function(d) {
+            return { id: d.id, data: function() { return d; }, exists: true };
+          });
+          onNext({ docs: docsArray, empty: docsArray.length === 0 });
+        }
+
+        runQuery();
+        var unsubscribe = subscribe(self.tableName, runQuery);
+        return function() { unsubscribe(); };
       }
-      return `/_blob/${id}`; // fallback
-    }
-  };
+    };
+  }
 
-  // --- Mock Room API (Presence) ---
-  const mockRoom = {
-    presence(data) {
-      return Promise.resolve();
-    },
-    peers() {
-      return Promise.resolve([]);
-    },
-    onPeers(cb) {
-      return () => {};
-    },
-    on(event, cb) {
-      return () => {};
-    },
-    emit(event, data) {
-      return Promise.resolve();
-    }
-  };
+  function createMockDoc(tableName, id) {
+    return {
+      tableName: tableName,
+      id: id,
+      get: function() {
+        var data = getDoc(tableName, id);
+        return Promise.resolve({
+          exists: !!data,
+          data: data ? function() { return fromSnakeCase(data); } : function() { return null; },
+          id: id
+        });
+      },
+      set: function(data) {
+        var newData = { id: id };
+        for (var k in data) newData[k] = data[k];
+        var snakeData = toSnakeCase(newData);
+        setDoc(tableName, id, snakeData);
+        var collection = getCollection(tableName);
+        collection[id] = true;
+        setCollection(tableName, collection);
+        notifyChange(tableName);
+        return Promise.resolve();
+      },
+      update: function(data) {
+        var snakeData = toSnakeCase(data);
+        var existing = getDoc(tableName, id) || {};
+        var merged = Object.assign({}, existing, snakeData);
+        setDoc(tableName, id, merged);
+        notifyChange(tableName);
+        return Promise.resolve();
+      },
+      delete: function() {
+        deleteDoc(tableName, id);
+        var collection = getCollection(tableName);
+        delete collection[id];
+        setCollection(tableName, collection);
+        notifyChange(tableName);
+        return Promise.resolve();
+      },
+      onSnapshot: function(onNext, onError) {
+        var self = this;
+        function runQuery() {
+          var data = getDoc(self.tableName, self.id);
+          onNext({
+            exists: !!data,
+            data: data ? function() { return fromSnakeCase(data); } : function() { return null; },
+            id: self.id
+          });
+        }
+        runQuery();
+        var unsubscribe = subscribe(self.tableName, runQuery);
+        return function() { unsubscribe(); };
+      }
+    };
+  }
 
-  // --- Global claude.use mock ---
+  function createMockAssets() {
+    return {
+      upload: function(file, options) {
+        var id = uuid();
+        var type = (options && options.type) || file.type;
+        return new Promise(function(resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function() {
+            try {
+              var assetData = {
+                id: id,
+                data: reader.result,
+                type: type,
+                size: file.size,
+                name: file.name,
+                uploadedAt: new Date().toISOString()
+              };
+              var key = STORAGE_PREFIX_ASSETS + id;
+              localStorage.setItem(key, JSON.stringify(assetData));
+              resolve({ id: id });
+            } catch (e) {
+              reject(e);
+            }
+          };
+          reader.onerror = function() { reject(new Error('Dosya okunamadı')); };
+          reader.readAsDataURL(file);
+        });
+      },
+      delete: function(id) {
+        var key = STORAGE_PREFIX_ASSETS + id;
+        localStorage.removeItem(key);
+        return Promise.resolve();
+      },
+      getUrl: function(id) {
+        var key = STORAGE_PREFIX_ASSETS + id;
+        var data = localStorage.getItem(key);
+        if (data) {
+          var asset = JSON.parse(data);
+          return Promise.resolve(asset.data);
+        }
+        return Promise.resolve('/_blob/' + id);
+      }
+    };
+  }
+
+  // Expose localStorage backend via window.claude.use
+  // This is the primary backend - no CDN, no external dependencies
   window.claude = window.claude || {};
-  window.claude.use = async (name) => {
+  window.claude.use = function(name) {
     switch (name) {
       case 'db':
-        return {
-          collection: (name) => new MockCollection(name),
-          doc: (path) => {
-            const [store, id] = path.split('/');
-            return new MockDoc(store, id);
+        return Promise.resolve({
+          collection: createMockCollection,
+          doc: function(path) {
+            var parts = path.split('/');
+            return createMockDoc(parts[0], parts[1]);
           }
-        };
-      case 'user':
-        return mockUser;
+        });
       case 'assets':
-        return mockAssets;
-      case 'room':
-        return mockRoom;
+        return Promise.resolve(createMockAssets());
       default:
-        return null;
+        return Promise.resolve(null);
     }
   };
 
-  // --- URL helper for assets ---
-  window.imgUrl = (id) => mockAssets.getUrl(id);
-
-  // --- Development mode indicator ---
-  console.log('%c[Oyun Atölyesi] Yerel geliştirme modu aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
-  console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
-  console.log('Verileri temizlemek için: localStorage.clear()');
-
+  // No auto-initialization, no CDN loading
+  console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
 })();</script>
 <script>
 const KINDS = [
   ["fikir", "Fikir"], ["mekanik", "Mekanik"], ["hikaye", "Hikâye"],
-  ["sanat", "Sanat & Ses"], ["gorev", "Görev"], ["hata", "Hata"]
+  ["sanat", "Sanat & Ses"], ["gorev", "Görev"], ["hata", "Hata"], ["videolar", "Videolar"]
 ];
 const KIND = Object.fromEntries(KINDS);
-const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!" };
+const KICON = { fikir: "✦", mekanik: "⚙︎", hikaye: "¶", sanat: "♪", gorev: "✓", hata: "!", videolar: "▶" };
 const STATUS = [["acik", "Açık"], ["suruyor", "Sürüyor"], ["bitti", "Bitti"]];
 const STATUS_N = Object.fromEntries(STATUS);
-const LS_KEY = "atolye-key", LS_SEEN = "atolye-seen";
+const LS_SEEN = "atolye-seen";
+const LS_USERNAME = "atolye-username";
 
 const S = {
   db: null, user: null, meId: null, canWrite: true,
@@ -1223,17 +1631,44 @@ function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
 }
+function toCamelCase(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var result = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k)) continue;
+      var camelKey = k.replace(/_([a-z])/g, function(_, letter) { return letter.toUpperCase(); });
+      var val = obj[k];
+      result[camelKey] = (val && typeof val === 'object' && !Array.isArray(val)) ? toCamelCase(val) : val;
+    }
+    return result;
+  }
+// Firestore Timestamp ve benzeri objeleri milisaniyeye çeviren yardımcı
+function toMillis(ts) {
+  if (!ts) return null;
+  if (typeof ts === 'number') return ts;
+  if (ts && typeof ts.toMillis === 'function') return ts.toMillis(); // Firestore Timestamp
+  if (ts && typeof ts.seconds === 'number') return ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6); // Firestore protobuf format
+  return null;
+}
+
 function ago(ts) {
-  const s = (Date.now() - ts) / 1000;
+  const ms = toMillis(ts);
+  if (ms === null || isNaN(ms)) return "bilinmiyor";
+  const s = (Date.now() - ms) / 1000;
   if (s < 60) return "az önce";
   if (s < 3600) return Math.floor(s / 60) + " dk önce";
   if (s < 86400) return Math.floor(s / 3600) + " sa önce";
   if (s < 172800) return "dün";
-  return new Date(ts).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? "bilinmiyor" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 }
+
 function who(id) {
   if (id && id === S.meId) return "Sen";
-  return (S.profiles[id] && S.profiles[id].name) || "Arkadaşın";
+  const profile = S.profiles[id];
+  if (profile && profile.name) return profile.name;
+  // Anonim kullanıcı için short ID (ilk 8 karakter - daha az çakışma)
+  return id ? "Arkadaşın " + String(id).slice(0, 8) : "Arkadaşın";
 }
 function computeColors() {
   const first = new Map();
@@ -1287,7 +1722,7 @@ function renderAvList() {
   const rawCur = (S.settings && S.settings.avatars && S.settings.avatars[S.meId]) || null;
   const cur = AV_ALIAS[rawCur] || rawCur;
   box.replaceChildren();
-  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "claude.ai fotoğrafım", src: null }]])) {
+  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "varsayılan fotoğraf", src: null }]])) {
     box.append(h("button", { type: "button", class: "chip avpick", "aria-pressed": String(cur === k),
       onclick: async () => { if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: k } }))) toast("Profil fotoğrafın güncellendi"); } },
       a.src ? h("img", { src: a.src, alt: "" }) : null, a.label));
@@ -1306,22 +1741,12 @@ function renderAvList() {
       mine ? h("img", { src: imgUrl(rawCur.slice(4)), alt: "" }) : null, mine ? "Kendi fotoğrafın · değiştir" : "Kendi fotoğrafını yükle"), inp);
   }
 }
-async function hash(pass) {
-  const s = "atolye|" + pass;
-  try {
-    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
-  } catch (e) {
-    let a = 5381; for (const c of s) a = ((a * 33) ^ c.charCodeAt(0)) >>> 0;
-    return "f" + a.toString(16);
-  }
-}
 function showNoWrite() {
   S.canWrite = false;
   const b = $("nowrite"); if (b) b.hidden = false;
 }
 function show(id) {
-  for (const s of ["s-loading", "s-noaccess", "s-setup", "s-wait", "s-lock", "s-app"]) $(s).hidden = s !== id;
+  for (const s of ["s-loading", "s-noaccess", "s-login", "s-wait", "s-app"]) $(s).hidden = s !== id;
 }
 async function write(fn, errEl) {
   try { await fn(); if (errEl) errEl.textContent = ""; return true; }
@@ -1338,46 +1763,130 @@ async function write(fn, errEl) {
 }
 
 /* ---------- boot & routing ---------- */
+
 async function boot() {
   const use = window.claude && window.claude.use;
   const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
   if (!db) { show("s-noaccess"); return; }
   S.db = db; S.user = user; S.assets = assets;
-  startPresence();
-  if (!assets) {
-    $("nw-filebtn").hidden = true;
-    $("nw-uphint").textContent = "Görsel eklemek için sayfanın sahibi seni Paylaş menüsünden Düzenleyici olarak eklemeli.";
+
+  // Check for stored username
+  const storedUsername = ls.get(LS_USERNAME);
+  const storedMeId = ls.get("atolye-meid");
+  if (storedUsername) {
+    const generatedMeId = generateUserId(storedUsername);
+    const storedMeId = ls.get("atolye-meid");
+    if (storedMeId && storedMeId !== generateUserId(storedUsername)) {
+      console.warn("MeId uyuşmazlığı, yeniden hesaplanıyor:", storedMeId, "->", generateUserId(storedUsername));
+    }
+    S.meId = generateUserId(storedUsername);
+    S.username = storedUsername;
+    S.canWrite = true;
+    // MeId'yi localStorage'da da sakla (oturum kalıcılığı için)
+    ls.set("atolye-meid", S.meId);
+  } else {
+    S.meId = null;
+    S.username = null;
+    S.canWrite = false;
   }
-  if (user) {
-    const me = await user.me();
-    S.meId = me.id;
-    S.canWrite = (await user.can("data.write")) !== false;
-    if (!S.canWrite) showNoWrite();
-  }
+
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
   const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
   document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
   window.addEventListener("pagehide", markSeen);
 
+  // Oturum doğrulama: localStorage'da kullanıcı varsa meId'yi doğrula
+  if (S.meId) {
+    try {
+      const me = await user?.me();
+      if (me && me.id && me.id !== S.meId) {
+        console.warn("MeId uyuşmazlığı, localStorage güncelleniyor:", S.meId, "->", me.id);
+        ls.set("atolye-meid", me.id);
+        S.meId = me.id;
+      }
+    } catch (e) {
+      console.warn("Oturum doğrulama hatası:", e);
+    }
+  }
+
+  // MeId'yi localStorage'da da sakla (oturum kalıcılığı için)
+  if (S.meId) {
+    ls.set("atolye-meid", S.meId);
+  }
+
+  S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
+
+  // Listen to settings changes
   db.doc("team/settings").onSnapshot(snap => {
-    S.settings = snap.exists ? snap.data() : null;
+    S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
+
+  // Initial route call so app doesn't stay on loading forever if listener is slow/fails
+  // If we have a user session but settings not loaded yet, treat as "settings not created yet" -> show login
+  if (S.settings === undefined && S.meId) {
+    S.settings = null;
+  }
+  route();
+
+  // Fix: gizli dosya input'una name attribute ekle (form validation hatası önlemi)
+  setTimeout(() => {
+    const fileInput = document.getElementById("nw-file");
+    if (fileInput && !fileInput.name) {
+      fileInput.name = "nw-file";
+    }
+  }, 0);
+}
+
+function generateUserId(username) {
+  // Simple hash to generate consistent user ID from username
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = ((hash << 5) - hash) + username.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return "user_" + Math.abs(hash).toString(36);
 }
 
 function route() {
+  console.log("🔍 route() çağrıldı", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings });
   const st = S.settings;
-  if (st === undefined) return show("s-loading");
-  if (!st || !st.passHash) return show(S.canWrite ? "s-setup" : "s-wait");
-  $("lock-game").textContent = st.game || "Oyun Atölyesi";
-  if (ls.get(LS_KEY) !== st.passHash) {
-    show("s-lock");
+  if (st === undefined) {
+    console.log("🔍 route: settings undefined, showing s-loading");
+    return show("s-loading");
+  }
+
+  // Check if user has username
+  if (!S.meId) {
+    console.log("🔍 route: no meId, showing s-login");
+    // Not logged in - show login screen if settings exist, or setup if first user
+    if (!st) {
+      show("s-login");
+    } else {
+      show("s-login");
+    }
+    // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
     if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
     return;
   }
+
+  console.log("🔍 route: has meId, checking settings", { st: !!st });
+
+  // User has username - check if atölye is set up
+  if (!st) {
+    console.log("🔍 route: no settings, showing s-login or s-wait");
+    show(S.canWrite ? "s-login" : "s-wait");
+    return;
+  }
+
+  console.log("🔍 route: showing s-app", { game: st.game });
+
+  // Atölye is set up and user has username - show app
   show("s-app");
+  const lockGameEl = $("lock-game");
+  if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atölyesi";
   $("game-name").textContent = st.game || "Oyun Atölyesi";
   if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
   if (!S.notesUnsub) {
@@ -1407,25 +1916,66 @@ function route() {
   render();
 }
 
-$("f-setup").addEventListener("submit", async e => {
+$("f-login").addEventListener("submit", async e => {
+  console.log("🔍 Form submit başladı", { username: $("lg-username").value.trim() });
   e.preventDefault();
-  const p1 = $("su-pass").value, p2 = $("su-pass2").value, err = $("su-err");
-  if (p1 !== p2) { err.textContent = "Şifreler aynı değil."; return; }
-  const ph = await hash(p1);
-  ls.set(LS_KEY, ph);
-  await write(() => S.db.doc("team/settings").set({
-    game: $("su-game").value.trim(), passHash: ph, createdBy: S.meId, createdAt: Date.now()
-  }), err);
+  const username = $("lg-username").value.trim();
+  const gameName = $("lg-game").value.trim();
+  const err = $("lg-err");
+
+  console.log("🔍 Form validation", { username, gameName });
+  if (!username) { err.textContent = "Kullanıcı adı girin."; return; }
+  if (username.length < 2) { err.textContent = "Kullanıcı adı en az 2 karakter olmalı."; return; }
+
+  const meId = generateUserId(username);
+  console.log("🔍 Generated meId", meId);
+  ls.set(LS_USERNAME, username);
+  S.meId = meId;
+  S.username = username;
+  S.canWrite = true;
+  console.log("🔍 S.meId set", S.meId);
+
+  // Create settings if first user
+  if (!S.settings) {
+    console.log("🔍 Creating settings, S.settings:", S.settings);
+    const game = gameName || "Oyun Atölyesi";
+    const newSettings = { game, createdBy: meId, createdAt: Date.now() };
+    await write(() => S.db.doc("team/settings").set(newSettings), err);
+    if (err.textContent) {
+      console.log("🔍 Write error:", err.textContent);
+      return;
+    }
+    // Yazma başarılıysa S.settings'i lokal olarak set et
+    S.settings = newSettings;
+    console.log("🔍 S.settings lokal set edildi:", S.settings);
+  }
+
+  // Her girişte ping satırı kontrolü/oluşturma (406 hatasını önlemek için)
+  try {
+    console.log("🔍 Ping satırı kontrol ediliyor...");
+    const pingDoc = await S.db.doc("pings/" + meId).get();
+    if (!pingDoc.exists) {
+      console.log("🔍 Ping satırı yok, ekleniyor...");
+      await S.db.doc("pings/" + meId).set({ id: meId });
+      console.log("🔍 Ping satırı eklendi");
+    } else {
+      console.log("🔍 Ping satırı zaten var");
+    }
+  } catch (pingErr) {
+    console.log("🔍 Ping kontrol/ekleme hatası (önemsiz):", pingErr);
+  }
+
+  err.textContent = "";
+  console.log("🔍 Calling route()");
+  route();
 });
 
-$("f-lock").addEventListener("submit", async e => {
-  e.preventDefault();
-  const ph = await hash($("lk-pass").value);
-  if (S.settings && ph === S.settings.passHash) {
-    ls.set(LS_KEY, ph); $("lk-pass").value = ""; $("lk-err").textContent = ""; route();
-  } else {
-    $("lk-err").textContent = "Şifre yanlış. Arkadaşına doğru şifreyi sor.";
-  }
+$("btn-logout").addEventListener("click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  route();
 });
 
 /* ---------- notifications & sound ---------- */
@@ -1752,7 +2302,7 @@ async function addChatImages(files) {
   for (const f of others) {
     const type = fileType(f);
     if (!type) toast((f.name || "Dosya") + ": bu tür yüklenemiyor. Görsel, PDF, MP4/WEBM, TXT, MD, CSV ve JSON destekleniyor.");
-    else if (f.size > 20 * 1024 * 1024) toast((f.name || "Dosya") + " 20 MB'tan büyük. claude.ai dosya başına en fazla 20 MB kabul ediyor.");
+    else if (f.size > 20 * 1024 * 1024) toast((f.name || "Dosya") + " 20 MB'tan büyük. Maksimum 20 MB dosya boyutu.");
     else {
       try { const r = await S.assets.upload(f, { type }); S.chatFiles.push({ id: r.id, name: String(f.name || "dosya").slice(0, 120), type, size: f.size }); }
       catch (e) { toast(assetErr(e)); }
@@ -1906,7 +2456,7 @@ const STICKERS = {
   kaydet: ["💾", "KAYDETTİN Mİ?"], rage: ["🤬", "RAGE QUIT"], easter: ["🥚", "EASTER EGG"], sabah: ["🌅", "SABAH OLDU"]
 };
 const BIG_EMOJI = /^(?:\p{Extended_Pictographic}|️|‍|\s)+$/u;
-const STK_KINDS = ["fikir", "mekanik", "hikaye", "sanat", "gorev", "hata"];
+const STK_KINDS = ["fikir", "mekanik", "hikaye", "sanat", "gorev", "hata", "videolar"];
 function stickerEl(key, tag, extra) {
   const [e, label] = STICKERS[key], k = STK_KINDS[Object.keys(STICKERS).indexOf(key) % STK_KINDS.length];
   return h(tag || "div", Object.assign({ class: "stk", style: `--sc:var(--k-${k});--sb:var(--k-${k}-bg)` }, extra || {}),
@@ -2105,19 +2655,22 @@ function renderJobs() {
   const starting = cl.on && !(cl.ack >= cl.since);
   const st = $("claude-status");
   st.className = "cstat " + (cl.on ? (starting ? "starting" : "on") : "off");
-  st.replaceChildren(h("span", { class: "cdot", "aria-hidden": "true" }),
+  const statusChildren = [
+    h("span", { class: "cdot", "aria-hidden": "true" }),
     h("div", { class: "ctext" },
       h("div", {}, cl.on ? (starting ? "Claude açılıyor… en geç 1 dakika içinde devreye girer" : "Claude açık · her dakika yeni işlere bakıyor") : "Claude kapalı · işler sırada bekler"),
       h("div", { class: "csub" }, cl.on
         ? (cl.by ? who(cl.by) + " açtı · " : "") + "yeni iş gelmezse yaklaşık " + left + " dk sonra kendiliğinden kapanır"
         : "Özgür açınca " + fmtMins(mins) + " açık kalır, her yeni iş süreyi baştan başlatır. Bu sürede iş gelmezse Claude tamamen kapanır."),
-      S.canWrite && S.meId && cl.on ? h("div", { class: "tadj" },
+      ...(S.canWrite && S.meId && cl.on ? [h("div", { class: "tadj" },
         h("button", { class: "btn sm", type: "button", disabled: mins <= 5, onclick: () => adjustMinutes(-15) }, "− 15 dk"),
         h("span", { class: "mono" }, "Süre: " + fmtMins(mins)),
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(15) }, "+ 15 dk"),
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
-        h("span", { class: "csub" }, "en fazla 8 saat")) : null),
-    S.canWrite && S.meId && cl.on ? h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat") : null);
+        h("span", { class: "csub" }, "en fazla 8 saat"))] : []),
+    ...(S.canWrite && S.meId && cl.on ? [h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat")] : [])
+  ];
+  st.replaceChildren(...statusChildren.filter(c => c != null));
   box.replaceChildren();
   if (!S.jobs.length) box.append(h("div", { class: "empty" }, h("strong", {}, "Henüz iş yok"),
     "Soldan Claude'a yapmasını istediğin şeyi yaz. Sırası gelince yapılır ve sonucu burada görünür."));
@@ -2345,6 +2898,11 @@ $("f-upd").addEventListener("submit", async e => {
 $("btn-settings").addEventListener("click", () => {
   const pop = $("pop-settings"); pop.hidden = !pop.hidden;
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
+  if (!pop.hidden) {
+    // Populate project URL in invite link field
+    const invLinkEl = $("inv-link-value");
+    if (invLinkEl) invLinkEl.textContent = location.origin + location.pathname;
+  }
 });
 document.addEventListener("click", e => {
   if (!e.target.closest(".menu")) { $("pop-settings").hidden = true; $("btn-settings").setAttribute("aria-expanded", "false"); }
@@ -2353,15 +2911,135 @@ $("f-game").addEventListener("submit", async e => {
   e.preventDefault();
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adı kaydedildi");
 });
-$("f-pass").addEventListener("submit", async e => {
-  e.preventDefault();
-  const ph = await hash($("st-pass").value);
-  const old = ls.get(LS_KEY);
-  ls.set(LS_KEY, ph);
-  if (await write(() => S.db.doc("team/settings").update({ passHash: ph }))) { $("st-pass").value = ""; toast("Şifre değiştirildi"); }
-  else ls.set(LS_KEY, old || "");
+
+/* invite link button in settings - just copy the project URL */
+$("btn-copy-invite").addEventListener("click", () => {
+  const link = location.origin + location.pathname;
+  navigator.clipboard.writeText(link).then(() => toast("Proje linki kopyalandı")).catch(() => toast("Kopyalanamadı"));
 });
-$("btn-lock").addEventListener("click", () => { ls.del(LS_KEY); $("pop-settings").hidden = true; route(); });
+
+$("btn-logout").addEventListener("click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  route();
+});
+
+$("btn-publish").addEventListener("click", () => {
+  alert("Yerel build'i güncellemek için:\n1. 'dist/index.html' dosyasını oluştur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
+});
+// Kullanıcı Listesi butonu - event delegation ile (buton DOM'da olmasa bile çalışır)
+// Bu sayede buton DOM'a eklendiğinde (giriş yapıldığında panel göründüğünde) otomatik çalışır
+document.addEventListener("click", e => {
+  if (e.target.closest("#btn-user-list")) showUserListModal();
+});
+
+function showUserListModal() {
+  // Mevcut kullanıcıları topla
+  const users = [];
+
+  // Mevcut kullanıcı
+  if (S.meId) {
+    users.push({
+      id: S.meId,
+      name: S.username || "Sen",
+      isCurrent: true
+    });
+  }
+
+  // Diğer kullanıcılar (profiles'den)
+  for (const [id, profile] of Object.entries(S.profiles)) {
+    if (id !== S.meId) {
+      users.push({
+        id,
+        name: profile.name || "Arkadaşın",
+        isCurrent: false
+      });
+    }
+  }
+
+  // LocalStorage'dan bilinen kullanıcıları da ekle (profiles'de olmayabilir)
+  const storedUsername = ls.get(LS_USERNAME);
+  const storedMeId = ls.get("atolye-meid");
+
+  // Modal oluştur
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Kullanıcı Listesi</h3>
+        <button class="modal-close" aria-label="Kapat">×</button>
+      </div>
+      <div class="modal-body">
+        ${users.length === 0
+          ? '<p class="empty">Henüz kullanıcı yok.</p>'
+          : users.map(u => `
+            <div class="user-item" data-id="${u.id}">
+              <span class="user-name">${u.name}${u.isCurrent ? ' (Sen)' : ''}</span>
+              ${!u.isCurrent ? `<button class="btn danger btn-sm user-remove" data-id="${u.id}" title="Kullanıcıyı çıkar">Çıkar</button>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Kapatma olayları
+  modal.querySelector(".modal-close").addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+  // Çıkarma butonları
+  modal.querySelectorAll(".user-remove").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const userId = e.target.dataset.id;
+      if (confirm("Bu kullanıcıyı çıkarmak istediğinizden emin misiniz?")) {
+        await removeUser(userId);
+        modal.remove();
+        showUserListModal(); // Listeyi yenile
+      }
+    });
+  });
+
+  // ESC tuşu ile kapatma
+  const handleEsc = (e) => {
+    if (e.key === "Escape") {
+      modal.remove();
+      document.removeEventListener("keydown", handleEsc);
+    }
+  };
+  document.addEventListener("keydown", handleEsc);
+}
+
+async function removeUser(userId) {
+  try {
+    // LocalStorage'dan sil
+    if (S.meId === userId) {
+      ls.del(LS_USERNAME);
+      ls.del("atolye-meid");
+      S.meId = null;
+      S.username = null;
+      S.canWrite = false;
+    }
+
+    // Profiles'den sil
+    delete S.profiles[userId];
+
+    // Firestore'dan sil
+    await S.db.doc("users/" + userId).delete().catch(() => {});
+
+    // Pings tablosundan da sil
+    await S.db.doc("pings/" + userId).delete().catch(() => {});
+
+    toast("Kullanıcı çıkarıldı");
+  } catch (e) {
+    console.error("Kullanıcı çıkarma hatası:", e);
+    toast("Kullanıcı çıkarılamadı: " + e.message);
+  }
+}
 
 /* ---------- images ---------- */
 const IMG_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -2536,7 +3214,7 @@ async function render() {
   if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
   ids.delete(undefined); ids.delete(null);
   if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
-  computeColors(); S.lastIds = ids; watchPings(); renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
 }
 /* online status: everyone with the page open is in the room; closing the tab leaves it */
 const PRES = { on: "çevrimiçi", away: "arka planda", off: "çevrimdışı" };
@@ -2703,7 +3381,7 @@ S.lastSeenOnline = {};
 function markLastSeen(id) { if (S.db && id) S.db.doc("lastseen/" + id).set({ at: Date.now() }).catch(() => {}); }
 function presLabel(id, st) {
   const at = S.lastSeenOnline[id];
-  return PRES[st] + (st === "off" && at ? " · son görülme " + ago(at) : "");
+  return PRES[st] + (st === "off" && at && typeof at === 'number' && !isNaN(at) ? " · son görülme " + ago(at) : "");
 }
 setInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
 S.typing = new Set();
@@ -2734,9 +3412,18 @@ function renderPeople(ids) {
       st && id !== S.meId ? h("span", { class: "pst2 " + st }, presLabel(id, st)) : null);
     if (id !== S.meId && S.canWrite && S.meId) {
       const out = S.pingOut[id];
-      const st = out && out.from === S.meId ? (out.seenAt && out.seenAt >= out.at ? "gördü ✓" : "bekliyor…") : "";
+      let st = "";
+      if (out && out.from === S.meId) {
+        const seenAt = out.seenAt;
+        const at = out.at;
+        if (seenAt && typeof seenAt === 'number' && at && typeof at === 'number' && seenAt >= at) {
+          st = "gördü ✓";
+        } else if (seenAt) {
+          st = "bekliyor…";
+        }
+      }
       chip.append(h("button", { class: "pingbtn", type: "button", title: "Dürt: sesli uyarı gider", onclick: () => sendPing(id) }, "Dürt"),
-        st ? h("span", { class: "pst" }, st) : null);
+        ...(st ? [h("span", { class: "pst" }, st)] : []));
     }
     box.append(chip);
   }
@@ -2973,16 +3660,19 @@ async function vote(id, v) {
 
 function renderEvents() {
   const evs = [];
+  const addEvent = (at, by, text, note) => {
+    if (typeof at === 'number' && !isNaN(at)) evs.push({ at, by, text, note });
+  };
   for (const n of S.notes) {
-    evs.push({ at: n.createdAt, by: n.author, text: "not ekledi: ", note: n });
+    addEvent(n.createdAt, n.author, "not ekledi: ", n);
     if (n.updatedAt - n.createdAt > 2000 && !(n.replies || []).some(r => r.at === n.updatedAt))
-      evs.push({ at: n.updatedAt, by: n.updatedBy, text: "notu güncelledi: ", note: n });
-    for (const r of n.replies || []) evs.push({ at: r.at, by: r.a, text: "yanıt yazdı: ", note: n });
-    for (const [uid, val] of Object.entries(n.votes || {})) if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "onay verdi: " : "reddetti: ", note: n });
-    for (const w of workers(n)) evs.push({ at: w.at, by: w.id, text: "ilgilenmeye başladı: ", note: n });
-    if (n.starred && n.starred.at) evs.push({ at: n.starred.at, by: n.starred.by, text: "★ yıldızladı: ", note: n });
+      addEvent(n.updatedAt, n.updatedBy, "notu güncelledi: ", n);
+    for (const r of n.replies || []) addEvent(r.at, r.a, "yanıt yazdı: ", n);
+    for (const [uid, val] of Object.entries(n.votes || {})) if (val) addEvent(val.at, uid, val.v === "yes" ? "onay verdi: " : "reddetti: ", n);
+    for (const w of workers(n)) addEvent(w.at, w.id, "ilgilenmeye başladı: ", n);
+    if (n.starred && n.starred.at) addEvent(n.starred.at, n.starred.by, "★ yıldızladı: ", n);
     for (const m of Object.values(n.rvotes || {})) for (const [uid, val] of Object.entries(m || {}))
-      if (val) evs.push({ at: val.at, by: uid, text: val.v === "yes" ? "bir yorumu onayladı: " : "bir yorumu reddetti: ", note: n });
+      if (val) addEvent(val.at, uid, val.v === "yes" ? "bir yorumu onayladı: " : "bir yorumu reddetti: ", n);
   }
   evs.sort((a, b) => b.at - a.at);
   const box = $("events"); box.replaceChildren();
