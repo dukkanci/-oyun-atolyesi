@@ -6,7 +6,9 @@ on:
     branches:
       - main
     paths:
-      - 'dist/**'
+      - 'src/**'
+      - 'build.js'
+      - 'package.json'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -19,9 +21,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Deploy dist to gh-pages
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Build HTML
+        run: node build.js
+
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
