@@ -298,13 +298,11 @@ async function boot() {
   }
 
   // Listen to settings changes
+  // onSnapshot fires immediately with current document, so no initial route() call needed
   db.doc("team/settings").onSnapshot(snap => {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
-
-  // Initial route call so app doesn't stay on loading forever if listener is slow/fails
-  route();
 
   // Fix: gizli dosya input'una name attribute ekle (form validation hatasi onlemi)
   setTimeout(() => {
