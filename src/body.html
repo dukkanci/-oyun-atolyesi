@@ -66,7 +66,11 @@
               <button class="btn" type="button" id="btn-copy-invite" title="Kopyala">Kopyala</button>
               <button class="btn" type="button" id="btn-generate-invite" title="Yeni davet linki oluştur">Yeniden Oluştur</button>
             </div>
-            <span class="hint">Bu linki arkadaşına gönder. O giriş yapıp atölyeye girecek.</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+              <input type="text" id="invite-code-input" class="field" placeholder="Davet kodunu buraya yapıştır" style="flex:1;min-width:200px" title="Arkadaşın gönderdiği davet kodunu buraya yapıştır">
+              <button class="btn" type="button" id="btn-apply-invite" title="Davet kodunu uygula">Katıl</button>
+            </div>
+            <span class="hint">Bu linki arkadaşına gönder. O giriş yapıp atölyeye girecek. Veya arkadaşın gönderdiği davet kodunu yukarıya yapıştırıp "Katıl" butonuna bas.</span>
           </div>
           <div style="display:grid;gap:6px">
             <span class="label">Profil fotoğrafın</span>

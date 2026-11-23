@@ -1444,6 +1444,20 @@ $("btn-generate-invite").addEventListener("click", async () => {
   }
 });
 
+/* apply invite code from input */
+$("btn-apply-invite").addEventListener("click", () => {
+  const input = $("invite-code-input");
+  if (!input) return;
+  const code = input.value.trim();
+  if (!code) {
+    toast("Davet kodu girin");
+    return;
+  }
+  // Navigate to URL with invite parameter
+  const link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
+  window.location.href = link;
+});
+
 $("btn-logout").addEventListener("click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
