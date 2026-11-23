@@ -684,6 +684,7 @@ $("btn-logout").addEventListener("click", () => {
   S.meId = null;
   S.username = null;
   S.canWrite = false;
+  S.welcomeShown = false;
   route();
 });
 
@@ -1750,6 +1751,7 @@ $("btn-logout").addEventListener("click", () => {
   S.meId = null;
   S.username = null;
   S.canWrite = false;
+  S.welcomeShown = false;
   route();
 });
 
