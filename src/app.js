@@ -1400,13 +1400,12 @@ $("f-upd").addEventListener("submit", async e => {
 });
 
 /* ---------- settings ---------- */
-function updateInviteLink() {
+function updateInviteCode() {
   const invLinkEl = $("inv-link-value");
   if (invLinkEl && S.settings && S.settings.inviteToken) {
-    const link = location.origin + location.pathname + "?invite=" + S.settings.inviteToken;
-    invLinkEl.textContent = link;
+    invLinkEl.textContent = S.settings.inviteToken;
   } else if (invLinkEl) {
-    invLinkEl.textContent = location.origin + location.pathname;
+    invLinkEl.textContent = "(henüz davet kodu yok)";
   }
 }
 
@@ -1415,7 +1414,7 @@ $("btn-settings").addEventListener("click", () => {
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) {
     // Populate project URL in invite link field
-    updateInviteLink();
+    updateInviteCode();
   }
 });
 document.addEventListener("click", e => {
@@ -1426,12 +1425,13 @@ $("f-game").addEventListener("submit", async e => {
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adi kaydedildi");
 });
 
-/* invite link button in settings - copy the project URL with invite token */
+/* invite code copy button - copy just the invite code */
 $("btn-copy-invite").addEventListener("click", () => {
-  const link = S.settings && S.settings.inviteToken
-    ? location.origin + location.pathname + "?invite=" + S.settings.inviteToken
-    : location.origin + location.pathname;
-  navigator.clipboard.writeText(link).then(() => toast("Davet linki kopyalandi")).catch(() => toast("Kopyalanamadi"));
+  if (!S.settings || !S.settings.inviteToken) {
+    toast("Henüz davet kodu yok");
+    return;
+  }
+  navigator.clipboard.writeText(S.settings.inviteToken).then(() => toast("Davet kodu kopyalandi")).catch(() => toast("Kopyalanamadi"));
 });
 
 /* generate new invite link button */
@@ -1439,8 +1439,8 @@ $("btn-generate-invite").addEventListener("click", async () => {
   if (!S.settings || !S.meId) return;
   const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   if (await write(() => S.db.doc("team/settings").update({ inviteToken: newToken }))) {
-    updateInviteLink();
-    toast("Yeni davet linki olusturuldu");
+    updateInviteCode();
+    toast("Yeni davet kodu olusturuldu");
   }
 });
 
