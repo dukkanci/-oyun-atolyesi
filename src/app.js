@@ -1682,7 +1682,7 @@ async function startPresence() {
    presence.voice marks who is in the call, and of each pair the lower peer label sends the offer */
 // Artifact çerçevesi mikrofonu engelliyor; sesli sohbet GitHub Pages'teki sayfada açılır.
 function openVoicePage() {
-  window.open("https://dukkanci.github.io/-oyun-atolyesi/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
+  window.open("https://dukkanci.github.io/-oyun-atolyesi/efsane-proje/ses/#" + ((S.settings && S.settings.createdAt) || ""), "_blank");
   toast("Sesli sohbet yeni sekmede açılıyor");
 }
 /* room yoksa da 📞 görünsün: doğrudan GitHub sayfasını açar */

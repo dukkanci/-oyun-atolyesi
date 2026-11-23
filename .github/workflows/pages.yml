@@ -28,6 +28,7 @@ jobs:
         run: |
           mkdir -p public/efsane-proje
           cp dist/index.html public/efsane-proje/index.html
+          cp -r ses public/efsane-proje/ses
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
