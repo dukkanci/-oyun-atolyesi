@@ -665,3 +665,26 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   @keyframes fadeIn { from { opacity: 0; } }
   @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } }
 }
+
+/* Offline banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--danger);
+  color: white;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  animation: slideDown 0.2s ease-out;
+}
+@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } }
+.offline-banner .btn { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3); color: white; }
+.offline-banner .btn:hover { background: rgba(255,255,255,.3); }

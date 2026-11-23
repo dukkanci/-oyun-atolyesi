@@ -18,6 +18,14 @@ const PRECONNECT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com", "www.gsta
 
 const read = f => fs.readFileSync(path.join(SRC, f), "utf8").replace(/\r\n/g, "\n").replace(/^\uFEFF/, "");
 
+// Copy manifest.json and sw.js to dist/ (they are not inlined in index.html)
+function copyStaticAssets() {
+  const distDir = path.join(ROOT, "dist");
+  fs.mkdirSync(distDir, { recursive: true });
+  fs.copyFileSync(path.join(SRC, "manifest.json"), path.join(distDir, "manifest.json"));
+  fs.copyFileSync(path.join(SRC, "sw.js"), path.join(distDir, "sw.js"));
+}
+
 function assemble() {
   const parts = [
     read("head.html"),
@@ -68,6 +76,7 @@ if (errs.length) {
 if (process.argv.includes("--check")) {
   console.log("Denetim tamam.");
 } else {
+  copyStaticAssets();
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, html);
   console.log("dist/index.html yazıldı (" + Buffer.byteLength(html) + " bayt). Denetim tamam.");

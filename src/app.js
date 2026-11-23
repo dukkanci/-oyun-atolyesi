@@ -13,7 +13,8 @@ const S = {
   db: null, user: null, meId: null, canWrite: true,
   settings: undefined, notes: [], profiles: {},
   f: { kind: "all", who: "all", status: "all", media: "all", q: "" },
-  newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0
+  newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0,
+  offline: false
 };
 
 const $ = id => document.getElementById(id);
@@ -38,6 +39,27 @@ function kindVars(k) { return `--kc:var(--k-${k});--kb:var(--k-${k}-bg);--ko:var
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
+}
+// Persistent toast for SW update notification
+function showToast(msg, persistent) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t);
+  if (!persistent) toast.t = setTimeout(() => (t.hidden = true), 2200);
+}
+// Update offline banner in header
+function updateOfflineBanner() {
+  const existing = document.getElementById('offline-banner');
+  if (S.offline) {
+    if (!existing) {
+      const banner = h('div', { id: 'offline-banner', class: 'offline-banner' },
+        h('span', {}, '📴 Çevrimdışı mod — değişiklikler lokal saklanıyor'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => window.location.reload() }, 'Yeniden dene')
+      );
+      document.body.prepend(banner);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
 }
 function toCamelCase(obj) {
     if (!obj || typeof obj !== 'object') return obj;
@@ -136,9 +158,10 @@ function renderAvList() {
         "button",
         { type: "button", class: "chip avpick", "aria-pressed": String(cur === entry[0]),
           onclick: () => {}
-      },
+        },
       entry[1].src ? h("img", { src: entry[1].src, alt: "" }) : null,
       entry[1].label
+    )
     )
   }
   if (S.assets && S.meId) {
@@ -183,6 +206,35 @@ async function boot() {
   const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
   if (!db) { show("s-noaccess"); return; }
   S.db = db; S.user = user; S.assets = assets;
+
+  // Register Service Worker for PWA/offline support
+  // Use absolute path based on current origin to work with both preview (localhost:3000/) and production (GitHub Pages)
+  if ('serviceWorker' in navigator) {
+    try {
+      // Determine the correct SW path: /sw.js for preview, /-oyun-atolyesi/efsane-proje/sw.js for production
+      const isPreview = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const swPath = isPreview ? '/sw.js' : '/-oyun-atolyesi/efsane-proje/sw.js';
+      const reg = await navigator.serviceWorker.register(swPath);
+      console.log('SW registered:', reg.scope);
+      // Listen for SW updates
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('Yeni sürüm hazır. Sayfayı yenileyin.', true);
+            }
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('SW registration failed:', e);
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); });
+    window.addEventListener('offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); });
+  }
 
   // Check for stored username
   const storedUsername = ls.get(LS_USERNAME);
@@ -1094,6 +1146,7 @@ function renderJobs() {
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
         h("span", { class: "csub" }, "en fazla 8 saat"))] : []),
     ...(S.canWrite && S.meId && cl.on ? [h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat")] : [])
+    )
   ];
   st.replaceChildren(...statusChildren.filter(c => c != null));
   box.replaceChildren();

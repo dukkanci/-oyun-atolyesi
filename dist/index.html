@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><base href="/-oyun-atolyesi/efsane-proje/"><meta name="build-version" content="2024-11-26-v6"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><base href="/-oyun-atolyesi/efsane-proje/"><meta name="build-version" content="2024-11-26-v6"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#33265a"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Oyun Atölyesi</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -671,6 +671,29 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   @keyframes fadeIn { from { opacity: 0; } }
   @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } }
 }
+
+/* Offline banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--danger);
+  color: white;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  animation: slideDown 0.2s ease-out;
+}
+@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } }
+.offline-banner .btn { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3); color: white; }
+.offline-banner .btn:hover { background: rgba(255,255,255,.3); }
 </style>
 <!-- loading -->
 <section id="s-loading" class="gate">
@@ -1605,7 +1628,8 @@ const S = {
   db: null, user: null, meId: null, canWrite: true,
   settings: undefined, notes: [], profiles: {},
   f: { kind: "all", who: "all", status: "all", media: "all", q: "" },
-  newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0
+  newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0,
+  offline: false
 };
 
 const $ = id => document.getElementById(id);
@@ -1630,6 +1654,27 @@ function kindVars(k) { return `--kc:var(--k-${k});--kb:var(--k-${k}-bg);--ko:var
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
+}
+// Persistent toast for SW update notification
+function showToast(msg, persistent) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t);
+  if (!persistent) toast.t = setTimeout(() => (t.hidden = true), 2200);
+}
+// Update offline banner in header
+function updateOfflineBanner() {
+  const existing = document.getElementById('offline-banner');
+  if (S.offline) {
+    if (!existing) {
+      const banner = h('div', { id: 'offline-banner', class: 'offline-banner' },
+        h('span', {}, '📴 Çevrimdışı mod — değişiklikler lokal saklanıyor'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => window.location.reload() }, 'Yeniden dene')
+      );
+      document.body.prepend(banner);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
 }
 function toCamelCase(obj) {
     if (!obj || typeof obj !== 'object') return obj;
@@ -1728,9 +1773,10 @@ function renderAvList() {
         "button",
         { type: "button", class: "chip avpick", "aria-pressed": String(cur === entry[0]),
           onclick: () => {}
-      },
+        },
       entry[1].src ? h("img", { src: entry[1].src, alt: "" }) : null,
       entry[1].label
+    )
     )
   }
   if (S.assets && S.meId) {
@@ -1775,6 +1821,35 @@ async function boot() {
   const [db, user, assets] = use ? await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("assets")]) : [null, null, null];
   if (!db) { show("s-noaccess"); return; }
   S.db = db; S.user = user; S.assets = assets;
+
+  // Register Service Worker for PWA/offline support
+  // Use absolute path based on current origin to work with both preview (localhost:3000/) and production (GitHub Pages)
+  if ('serviceWorker' in navigator) {
+    try {
+      // Determine the correct SW path: /sw.js for preview, /-oyun-atolyesi/efsane-proje/sw.js for production
+      const isPreview = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const swPath = isPreview ? '/sw.js' : '/-oyun-atolyesi/efsane-proje/sw.js';
+      const reg = await navigator.serviceWorker.register(swPath);
+      console.log('SW registered:', reg.scope);
+      // Listen for SW updates
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('Yeni sürüm hazır. Sayfayı yenileyin.', true);
+            }
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('SW registration failed:', e);
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); });
+    window.addEventListener('offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); });
+  }
 
   // Check for stored username
   const storedUsername = ls.get(LS_USERNAME);
@@ -2686,6 +2761,7 @@ function renderJobs() {
         h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
         h("span", { class: "csub" }, "en fazla 8 saat"))] : []),
     ...(S.canWrite && S.meId && cl.on ? [h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat")] : [])
+    )
   ];
   st.replaceChildren(...statusChildren.filter(c => c != null));
   box.replaceChildren();

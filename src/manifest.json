@@ -1,0 +1,22 @@
+{
+  "name": "Oyun Atölyesi",
+  "short_name": "Atölye",
+  "description": "İki kişilik ekibin oyun fikirlerini, notlarını, sohbetini ve build'lerini paylaştığı tek sayfalık uygulama",
+  "start_url": "/-oyun-atolyesi/efsane-proje/",
+  "scope": "/-oyun-atolyesi/efsane-proje/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#33265a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2333265a'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>✦</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "tr",
+  "dir": "ltr"
+}
