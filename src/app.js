@@ -674,6 +674,41 @@ $("f-login").addEventListener("submit", async e => {
   // Load user's workshops from localStorage
   loadUserWorkshops();
 
+  // Check for invitation token in localStorage (from ?invite= URL parameter)
+  const storedInviteToken = ls.get('atolye-invite');
+  if (storedInviteToken) {
+    // Find workshop with this invite token
+    const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken);
+    if (targetWorkshop) {
+      console.log("🔍 Valid invitation token found, switching to workshop:", targetWorkshop.id);
+      // Switch to the target workshop
+      S.currentWorkshop = targetWorkshop.id;
+      // Load workshop settings
+      const settingsKey = `workshop_${targetWorkshop.id}_settings`;
+      const storedSettings = ls.get(`supabase_doc_${settingsKey}`);
+      if (storedSettings) {
+        try {
+          S.settings = JSON.parse(storedSettings);
+        } catch (e) {
+          console.warn('Settings parse error:', e);
+          S.settings = null;
+        }
+      }
+      // Add user to workshop avatars
+      const currentAvatars = S.settings.avatars || {};
+      currentAvatars[S.meId] = "rotate";
+      await write(() => S.db.doc("team/settings").update({ avatars: currentAvatars }), err);
+      if (!err.textContent) {
+        toast("Atölyeye davet edildiniz! Hoş geldiniz!");
+        ls.remove('atolye-invite'); // Clear the invite token after use
+      }
+    } else {
+      console.warn("🔍 Invalid invitation token, no workshop found with this token");
+      toast("Geçersiz davet kodu!");
+    }
+    ls.remove('atolye-invite'); // Clear the invite token after use
+  }
+
   err.textContent = "";
   console.log("🔍 Calling route() - showing lobby");
   route();
