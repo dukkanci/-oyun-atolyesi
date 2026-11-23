@@ -24,13 +24,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build project
+        run: |
+          cd efsane-proje
+          node build.js
+
       - name: Prepare project
         run: |
           mkdir -p public/efsane-proje
-          cp dist/index.html public/efsane-proje/index.html
-          cp dist/manifest.json public/efsane-proje/manifest.json
-          cp dist/sw.js public/efsane-proje/sw.js
-          cp -r ses public/efsane-proje/ses
+          cp efsane-proje/dist/index.html public/efsane-proje/index.html
+          cp efsane-proje/dist/manifest.json public/efsane-proje/manifest.json
+          cp efsane-proje/dist/sw.js public/efsane-proje/sw.js
+          cp -r efsane-proje/ses public/efsane-proje/ses
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
