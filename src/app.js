@@ -18,7 +18,8 @@ const S = {
   // Lobby/workshop state
   currentWorkshop: null,
   workshops: [],
-  lobbyUnsub: null
+  lobbyUnsub: null,
+  welcomeShown: false
 };
 
 const $ = id => document.getElementById(id);
@@ -478,6 +479,13 @@ function showLobby() {
   show("s-lobby");
 }
 
+function showWelcomeScreen() {
+  const usernameEl = $("welcome-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+  S.welcomeShown = true;
+  show("s-welcome");
+}
+
 function showApp() {
   show("s-app");
 }
@@ -506,8 +514,15 @@ function route() {
 
   // User has username - check if workshop selected
   if (!S.currentWorkshop) {
-    console.log("🔍 route: no workshop selected, showing lobby");
-    showLobby();
+    // Check if we should show welcome screen or lobby
+    const showWelcome = !S.welcomeShown;
+    if (showWelcome) {
+      console.log("🔍 route: no workshop selected, showing welcome");
+      showWelcomeScreen();
+    } else {
+      console.log("🔍 route: no workshop selected, showing lobby");
+      showLobby();
+    }
     return;
   }
 
@@ -556,6 +571,13 @@ function showLobby() {
   show("s-lobby");
 }
 
+function showWelcomeScreen() {
+  const usernameEl = $("welcome-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+  S.welcomeShown = true;
+  show("s-welcome");
+}
+
 function showApp() {
   show("s-app");
 }
@@ -584,8 +606,15 @@ function route() {
 
   // User has username - check if workshop selected
   if (!S.currentWorkshop) {
-    console.log("🔍 route: no workshop selected, showing lobby");
-    showLobby();
+    // Check if we should show welcome screen or lobby
+    const showWelcome = !S.welcomeShown;
+    if (showWelcome) {
+      console.log("🔍 route: no workshop selected, showing welcome");
+      showWelcomeScreen();
+    } else {
+      console.log("🔍 route: no workshop selected, showing lobby");
+      showLobby();
+    }
     return;
   }
 
@@ -726,6 +755,11 @@ $("btn-logout-lobby").addEventListener("click", () => {
   S.canWrite = false;
   S.currentWorkshop = null;
   route();
+});
+
+$("btn-open-lobby").addEventListener("click", () => {
+  S.welcomeShown = true;
+  showLobby();
 });
 
 /* Modal close handlers */

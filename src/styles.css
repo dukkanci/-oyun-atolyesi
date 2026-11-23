@@ -833,3 +833,27 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .modal .btn {
   min-width: 100px;
 }
+
+/* Welcome screen styles */
+.welcome-card {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+.welcome-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+.welcome-header h1 span {
+  color: var(--accent);
+}
+.welcome-desc {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.welcome-card .btn {
+  width: 100%;
+  max-width: 300px;
+  margin: 8px auto;
+}
