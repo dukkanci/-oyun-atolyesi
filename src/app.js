@@ -157,7 +157,10 @@ function renderAvList() {
       h(
         "button",
         { type: "button", class: "chip avpick", "aria-pressed": String(cur === entry[0]),
-          onclick: () => {}
+          onclick: async () => {
+            if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: entry[0] } })))
+              toast("Profil fotografi guncellendi");
+          }
         },
       entry[1].src ? h("img", { src: entry[1].src, alt: "" }) : null,
       entry[1].label
