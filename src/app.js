@@ -130,10 +130,16 @@ function renderAvList() {
   const rawCur = (S.settings && S.settings.avatars && S.settings.avatars[S.meId]) || null;
   const cur = AV_ALIAS[rawCur] || rawCur;
   box.replaceChildren();
-  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "varsayılan fotoğraf", src: null }]])) {
-    box.append(h("button", { type: "button", class: "chip avpick", "aria-pressed": String(cur === k),
-      onclick: async () => { if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: k } }))) toast("Profil fotoğrafın güncellendi"); } },
-      a.src ? h("img", { src: a.src, alt: "" }) : null, a.label));
+  for (const [k, a] of Object.entries(AVATARS).concat([[null, { label: "varsayılan fotoğraf", src: null }])) {
+    box.append(
+      h(
+        "button",
+        { type: "button", class: "chip avpick", "aria-pressed": String(cur === k),
+          onclick: async () => { if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: k } }))) toast("Profil fotoğrın güncelleydi"); }
+      ),
+      a.src ? h("img", { src: a.src, alt: "" }) : null,
+      a.label
+    )
   }
   if (S.assets && S.meId) {
     const inp = h("input", { type: "file", id: "av-file", accept: IMG_TYPES.join(","), hidden: true });
@@ -224,6 +230,21 @@ async function boot() {
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
 
+  // Check localStorage for existing settings document (team/settings)
+  // This prevents "Atölye açılıyor..." takılma sorunu
+  const settingsKey = 'supabase_doc_team_settings';
+  const storedSettings = ls.get(settingsKey);
+  if (storedSettings) {
+    try {
+      S.settings = JSON.parse(storedSettings);
+    } catch (e) {
+      console.warn('Settings parse hatası:', e);
+      S.settings = null;
+    }
+  } else {
+    S.settings = null;
+  }
+
   // Listen to settings changes
   db.doc("team/settings").onSnapshot(snap => {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
@@ -231,10 +252,6 @@ async function boot() {
   }, () => show("s-noaccess"));
 
   // Initial route call so app doesn't stay on loading forever if listener is slow/fails
-  // If we have a user session but settings not loaded yet, treat as "settings not created yet" -> show login
-  if (S.settings === undefined && S.meId) {
-    S.settings = null;
-  }
   route();
 
   // Fix: gizli dosya input'una name attribute ekle (form validation hatası önlemi)
