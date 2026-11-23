@@ -14,7 +14,11 @@ const S = {
   settings: undefined, notes: [], profiles: {},
   f: { kind: "all", who: "all", status: "all", media: "all", q: "" },
   newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0,
-  offline: false
+  offline: false,
+  // Lobby/workshop state
+  currentWorkshop: null,
+  workshops: [],
+  lobbyUnsub: null
 };
 
 const $ = id => document.getElementById(id);
@@ -336,8 +340,150 @@ function generateUserId(username) {
   return "user_" + Math.abs(hash).toString(36);
 }
 
+/* ---------- Lobby/Workshop Management ---------- */
+const WORKSHOPS_KEY = "atolye-workshops";
+
+function loadUserWorkshops() {
+  try {
+    const stored = ls.get(WORKSHOPS_KEY);
+    S.workshops = stored ? JSON.parse(stored) : [];
+    console.log("🔍 Loaded user workshops:", S.workshops);
+  } catch (e) {
+    console.warn("Workshops load error:", e);
+    S.workshops = [];
+  }
+}
+
+function saveUserWorkshops() {
+  try {
+    ls.set(WORKSHOPS_KEY, JSON.stringify(S.workshops));
+  } catch (e) {
+    console.warn("Workshops save error:", e);
+  }
+}
+
+function addWorkshopToUser(workshop) {
+  const exists = S.workshops.some(w => w.id === workshop.id);
+  if (!exists) {
+    S.workshops.push(workshop);
+    saveUserWorkshops();
+  }
+}
+
+function removeWorkshopFromUser(workshopId) {
+  S.workshops = S.workshops.filter(w => w.id !== workshopId);
+  saveUserWorkshops();
+}
+
+function getWorkshopSettings(workshopId) {
+  // In a multi-workshop architecture, settings would be stored per workshop
+  // For now, we use the same team/settings but with workshop-specific data
+  return S.settings;
+}
+
+async function createWorkshop(gameName) {
+  const meId = S.meId;
+  if (!meId) return null;
+
+  const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const workshopId = "ws_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8);
+  const now = Date.now();
+
+  const workshopData = {
+    id: workshopId,
+    game: gameName || "Oyun Atölyesi",
+    inviteToken,
+    createdBy: meId,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  // Save workshop settings (in a real multi-workshop setup, this would be a separate document)
+  // For now, we store workshop info in user's localStorage
+  addWorkshopToUser({ id: workshopId, game: workshopData.game, inviteToken: workshopData.inviteToken, createdAt: now });
+
+  // Create settings for this workshop (using a workshop-specific key)
+  const settingsKey = `workshop_${workshopId}_settings`;
+  const newSettings = {
+    game: workshopData.game,
+    createdBy: meId,
+    createdAt: now,
+    inviteToken: workshopData.inviteToken,
+    workshopId: workshopId
+  };
+  ls.set(`supabase_doc_${settingsKey}`, JSON.stringify(newSettings));
+
+  // Initialize workshop-specific collections
+  // In a real implementation, these would be separate Firestore collections
+  // For now, we use prefixed keys in localStorage
+
+  return workshopData;
+}
+
+function switchWorkshop(workshopId) {
+  S.currentWorkshop = workshopId;
+  // Load workshop-specific settings
+  const settingsKey = `workshop_${workshopId}_settings`;
+  const storedSettings = ls.get(`supabase_doc_${settingsKey}`);
+  if (storedSettings) {
+    try {
+      S.settings = JSON.parse(storedSettings);
+    } catch (e) {
+      console.warn("Settings parse error:", e);
+      S.settings = null;
+    }
+  }
+  route();
+}
+
+function renderLobby() {
+  const box = $("lobby-workshops");
+  if (!box) return;
+
+  if (S.workshops.length === 0) {
+    box.innerHTML = '<div class="empty">Henüz atölyeniz yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  for (const ws of S.workshops) {
+    const isCurrent = S.currentWorkshop === ws.id;
+    const item = h("div", {
+      class: "workshop-item" + (isCurrent ? " current" : ""),
+      onclick: () => {
+        switchWorkshop(ws.id);
+        show("s-app");
+      }
+    },
+      h("div", { class: "workshop-info" },
+        h("div", { class: "workshop-name" }, ws.game),
+        h("div", { class: "workshop-meta" },
+          "Davet kodu: " + (ws.inviteToken || "yok").substring(0, 12) + "...",
+          " · Oluşturulma: " + new Date(ws.createdAt).toLocaleDateString("tr-TR")
+        )
+      ),
+      isCurrent ? h("span", { class: "workshop-badge" }, "Aktif") : h("span", { class: "workshop-arrow" }, "→")
+    );
+    box.appendChild(item);
+  }
+}
+
+function showLobby() {
+  // Update username display
+  const usernameEl = $("lobby-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+
+  // Render workshops
+  renderLobby();
+  show("s-lobby");
+}
+
+function showApp() {
+  show("s-app");
+}
+
 function route() {
-  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings });
+  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
   const st = S.settings;
   if (st === undefined) {
     console.log("🔍 route: settings undefined, showing s-loading");
@@ -347,32 +493,106 @@ function route() {
   // Check if user has username
   if (!S.meId) {
     console.log("🔍 route: no meId, showing s-login");
-    // Not logged in - show login screen if settings exist, or setup if first user
-    if (!st) {
-      show("s-login");
-    } else {
-      show("s-login");
-    }
+    show("s-login");
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
     if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
+    if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
     return;
   }
 
-  console.log("🔍 route: has meId, checking settings", { st: !!st });
+  console.log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
 
-  // User has username - check if atolye is set up
-  if (!st) {
-    console.log("🔍 route: no settings, showing s-login or s-wait");
-    show(S.canWrite ? "s-login" : "s-wait");
+  // User has username - check if workshop selected
+  if (!S.currentWorkshop) {
+    console.log("🔍 route: no workshop selected, showing lobby");
+    showLobby();
     return;
   }
 
-  console.log("🔍 route: showing s-app", { game: st.game });
+  console.log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
 
-  // Atolye is set up and user has username - show app
+  // Workshop selected - show app
+  showApp();
+  const lockGameEl = $("lock-game");
+  if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atolyesi";
+  $("game-name").textContent = st.game || "Oyun Atolyesi";
+  if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
+  if (!S.notesUnsub) {
+    S.liveSince = Date.now();
+    S.notesUnsub = S.db.collection("notes").orderBy("updatedAt", "desc").limit(500).onSnapshot(snap => {
+      const prev = S.notes;
+      S.notes = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      const news = detectNews(prev, S.notes);
+      render().then(() => { if (news.length) { playSound(topSound(news)); news.slice(0, 3).forEach(notify); } });
+    }, () => toast("Notlar yuklenemedi. Sayfayi yenile."));
+  }
+  startJobs();
+  startUpdates();
+  if (!S.lsUnsub) S.lsUnsub = S.db.collection("lastseen").onSnapshot(s => {
+    S.lastSeenOnline = Object.fromEntries(s.docs.map(d => [d.id, d.data().at]));
+    renderPeople(S.lastIds || new Set());
+  }, () => {});
+  if (!S.seenUnsub) S.seenUnsub = S.db.collection("chatseen").onSnapshot(s => {
+    S.seenBy = Object.fromEntries(s.docs.map(d => [d.id, d.data()]));
+    renderChat(false);
+  }, () => {});
+  if (!S.stkUnsub) S.stkUnsub = S.db.collection("stickers").orderBy("at", "asc").limit(100).onSnapshot(s => {
+    S.stickers = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(x => x.img);
+    if (!$("emoji-pop").hidden && S.epTab === "Sticker") renderEmojiPop();
+  }, () => {});
+  if (!S.chatUnsub) S.chatUnsub = S.db.collection("chat").orderBy("at", "desc").limit(300).onSnapshot(onChat, () => toast("Sohbet yuklenemedi. Sayfayi yenile."));
+  render();
+}
+
+function showLobby() {
+  // Update username display
+  const usernameEl = $("lobby-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+
+  // Render workshops
+  renderLobby();
+  show("s-lobby");
+}
+
+function showApp() {
   show("s-app");
+}
+
+function route() {
+  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
+  const st = S.settings;
+  if (st === undefined) {
+    console.log("🔍 route: settings undefined, showing s-loading");
+    return show("s-loading");
+  }
+
+  // Check if user has username
+  if (!S.meId) {
+    console.log("🔍 route: no meId, showing s-login");
+    show("s-login");
+    // Clean up any active subscriptions
+    if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
+    if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
+    if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
+    if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
+    return;
+  }
+
+  console.log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
+
+  // User has username - check if workshop selected
+  if (!S.currentWorkshop) {
+    console.log("🔍 route: no workshop selected, showing lobby");
+    showLobby();
+    return;
+  }
+
+  console.log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
+
+  // Workshop selected - show app
+  showApp();
   const lockGameEl = $("lock-game");
   if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atolyesi";
   $("game-name").textContent = st.game || "Oyun Atolyesi";
@@ -408,10 +628,9 @@ $("f-login").addEventListener("submit", async e => {
   console.log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
   e.preventDefault();
   const username = $("lg-username").value.trim();
-  const gameName = $("lg-game").value.trim();
   const err = $("lg-err");
 
-  console.log("🔍 Form validation", { username, gameName });
+  console.log("🔍 Form validation", { username });
   if (!username) { err.textContent = "Kullanici adi girin."; return; }
   if (username.length < 2) { err.textContent = "Kullanici adi en az 2 karakter olmali."; return; }
 
@@ -423,54 +642,11 @@ $("f-login").addEventListener("submit", async e => {
   S.canWrite = true;
   console.log("🔍 S.meId set", S.meId);
 
-  // Create settings if first user
-  if (!S.settings) {
-    console.log("🔍 Creating settings, S.settings:", S.settings);
-    const game = gameName || "Oyun Atolyesi";
-    // Generate unique invite token for this workshop
-    const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const newSettings = { game, createdBy: meId, createdAt: Date.now(), inviteToken };
-    await write(() => S.db.doc("team/settings").set(newSettings), err);
-    if (err.textContent) {
-      console.log("🔍 Write error:", err.textContent);
-      return;
-    }
-    // Yazma basariliysa S.settings'i lokal olarak set et
-    S.settings = newSettings;
-    console.log("🔍 S.settings lokal set edildi:", S.settings);
-  }
-
-  // Check for invitation token in localStorage (from ?invite= URL parameter)
-  const storedInviteToken = ls.get('atolye-invite');
-  if (storedInviteToken && S.settings && S.settings.inviteToken === storedInviteToken) {
-    // Valid invitation token - add user to workshop by adding their avatar
-    console.log("🔍 Valid invitation token found, adding user to workshop");
-    const currentAvatars = S.settings.avatars || {};
-    currentAvatars[meId] = "rotate"; // Default to rotating avatar
-    await write(() => S.db.doc("team/settings").update({ avatars: currentAvatars }), err);
-    if (!err.textContent) {
-      toast("Atölyeye davet edildiniz! Hoş geldiniz!");
-      ls.remove('atolye-invite'); // Clear the invite token after use
-    }
-  }
-
-  // Her giriste ping satiri kontrolu/olusturma (406 hatasini onlemek icin)
-  try {
-    console.log("🔍 Ping satiri kontrol ediliyor...");
-    const pingDoc = await S.db.doc("pings/" + meId).get();
-    if (!pingDoc.exists) {
-      console.log("🔍 Ping satiri yok, ekleniyor...");
-      await S.db.doc("pings/" + meId).set({ id: meId });
-      console.log("🔍 Ping satiri eklendi");
-    } else {
-      console.log("🔍 Ping satiri zaten var");
-    }
-  } catch (pingErr) {
-    console.log("🔍 Ping kontrol/ekleme hatasi (onemsiz):", pingErr);
-  }
+  // Load user's workshops from localStorage
+  loadUserWorkshops();
 
   err.textContent = "";
-  console.log("🔍 Calling route()");
+  console.log("🔍 Calling route() - showing lobby");
   route();
 });
 
@@ -480,6 +656,83 @@ $("btn-logout").addEventListener("click", () => {
   S.username = null;
   S.canWrite = false;
   route();
+});
+
+/* Lobby event handlers */
+$("btn-create-workshop").addEventListener("click", () => {
+  const modal = $("create-workshop-modal");
+  if (modal) {
+    modal.hidden = false;
+    setTimeout(() => {
+      const input = $("cw-game");
+      if (input) input.focus();
+    }, 100);
+  }
+});
+
+$("btn-cancel-create").addEventListener("click", () => {
+  const modal = $("create-workshop-modal");
+  if (modal) modal.hidden = true;
+});
+
+$("f-create-workshop").addEventListener("submit", async e => {
+  e.preventDefault();
+  const gameName = $("cw-game").value.trim();
+  const err = $("cw-err");
+  if (!gameName) { err.textContent = "Atölye adı girin."; return; }
+  const workshop = await createWorkshop(gameName);
+  if (workshop) {
+    const modal = $("create-workshop-modal");
+    if (modal) modal.hidden = true;
+    $("cw-game").value = "";
+    toast("Atölye oluşturuldu!");
+    renderLobby();
+    // Auto-switch to new workshop
+    switchWorkshop(workshop.id);
+    showApp();
+  }
+});
+
+$("btn-join-workshop").addEventListener("click", () => {
+  const modal = $("join-workshop-modal");
+  if (modal) {
+    modal.hidden = false;
+    setTimeout(() => {
+      const input = $("jw-code");
+      if (input) input.focus();
+    }, 100);
+  }
+});
+
+$("btn-cancel-join").addEventListener("click", () => {
+  const modal = $("join-workshop-modal");
+  if (modal) modal.hidden = true;
+});
+
+$("f-join-workshop").addEventListener("submit", async e => {
+  e.preventDefault();
+  const code = $("jw-code").value.trim();
+  const err = $("jw-err");
+  if (!code) { err.textContent = "Davet kodu girin."; return; }
+  // Navigate to URL with invite parameter
+  const link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
+  window.location.href = link;
+});
+
+$("btn-logout-lobby").addEventListener("click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  S.currentWorkshop = null;
+  route();
+});
+
+/* Modal close handlers */
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("modal-overlay") || e.target.classList.contains("modal-close")) {
+    document.querySelectorAll(".modal-overlay").forEach(m => m.hidden = true);
+  }
 });
 
 /* ---------- notifications & sound ---------- */

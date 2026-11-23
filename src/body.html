@@ -20,10 +20,8 @@
     <form id="f-login">
       <label class="label" for="lg-username">Kullanıcı adı</label>
       <input class="field" id="lg-username" required maxlength="30" placeholder="ör. oyuncu1" autocomplete="username">
-      <label class="label" for="lg-game">Oyun adı (ilk girişte)</label>
-      <input class="field" id="lg-game" maxlength="60" placeholder="ör. Proje Fener">
       <p class="err" id="lg-err"></p>
-      <button class="btn primary" type="submit">Atölyeye gir</button>
+      <button class="btn primary" type="submit">Giriş Yap</button>
     </form>
   </div>
 </section>
@@ -33,6 +31,65 @@
   <div class="gate-card">
     <h1>Atölye henüz kurulmadı</h1>
     <p>Sayfanın sahibi önce oyun adını belirlemeli. Kurulum bitince bu ekran kendiliğinden giriş ekranına döner.</p>
+  </div>
+</section>
+
+<!-- lobby - atölye listesi ve yönetimi -->
+<section id="s-lobby" class="gate" hidden>
+  <div class="gate-card lobby-card">
+    <div class="lobby-header">
+      <h1>Oyun Atölyesi</h1>
+      <div class="lobby-user">
+        <span id="lobby-username"></span>
+        <button class="btn ghost" id="btn-logout-lobby" type="button">Çıkış</button>
+      </div>
+    </div>
+    <div class="lobby-content">
+      <div class="lobby-section">
+        <h2>Atölyelerim</h2>
+        <div id="lobby-workshops" class="workshop-list">
+          <div class="empty">Henüz atölyeniz yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>
+        </div>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn primary" id="btn-create-workshop" type="button">Yeni Atölye Oluştur</button>
+        <button class="btn" id="btn-join-workshop" type="button">Davet Kodu ile Katıl</button>
+      </div>
+    </div>
+
+    <!-- Create workshop modal -->
+    <div id="create-workshop-modal" class="modal-overlay" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Yeni Atölye Oluştur</h3>
+          <button class="modal-close" aria-label="Kapat">×</button>
+        </div>
+        <form id="f-create-workshop" style="display:grid;gap:8px">
+          <label class="label" for="cw-game">Atölye Adı</label>
+          <input class="field" id="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
+          <p class="err" id="cw-err"></p>
+          <button class="btn primary" type="submit">Oluştur</button>
+          <button class="btn ghost" type="button" id="btn-cancel-create">İptal</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Join workshop modal -->
+    <div id="join-workshop-modal" class="modal-overlay" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Davet Kodu ile Katıl</h3>
+          <button class="modal-close" aria-label="Kapat">×</button>
+        </div>
+        <form id="f-join-workshop" style="display:grid;gap:8px">
+          <label class="label" for="jw-code">Davet Kodu</label>
+          <input class="field" id="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
+          <p class="err" id="jw-err"></p>
+          <button class="btn primary" type="submit">Katıl</button>
+          <button class="btn ghost" type="button" id="btn-cancel-join">İptal</button>
+        </form>
+      </div>
+    </div>
   </div>
 </section>
 
