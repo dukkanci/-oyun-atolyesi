@@ -300,6 +300,16 @@ async function boot() {
     S.settings = null;
   }
 
+  // Check for invitation token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const inviteToken = urlParams.get('invite');
+  if (inviteToken) {
+    // Store the invite token in localStorage for later use when user logs in
+    ls.set('atolye-invite', inviteToken);
+    // Clean up URL to remove the invite parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   // Listen to settings changes
   // onSnapshot fires immediately with current document, so no initial route() call needed
   db.doc("team/settings").onSnapshot(snap => {
@@ -417,7 +427,9 @@ $("f-login").addEventListener("submit", async e => {
   if (!S.settings) {
     console.log("🔍 Creating settings, S.settings:", S.settings);
     const game = gameName || "Oyun Atolyesi";
-    const newSettings = { game, createdBy: meId, createdAt: Date.now() };
+    // Generate unique invite token for this workshop
+    const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const newSettings = { game, createdBy: meId, createdAt: Date.now(), inviteToken };
     await write(() => S.db.doc("team/settings").set(newSettings), err);
     if (err.textContent) {
       console.log("🔍 Write error:", err.textContent);
@@ -426,6 +438,20 @@ $("f-login").addEventListener("submit", async e => {
     // Yazma basariliysa S.settings'i lokal olarak set et
     S.settings = newSettings;
     console.log("🔍 S.settings lokal set edildi:", S.settings);
+  }
+
+  // Check for invitation token in localStorage (from ?invite= URL parameter)
+  const storedInviteToken = ls.get('atolye-invite');
+  if (storedInviteToken && S.settings && S.settings.inviteToken === storedInviteToken) {
+    // Valid invitation token - add user to workshop by adding their avatar
+    console.log("🔍 Valid invitation token found, adding user to workshop");
+    const currentAvatars = S.settings.avatars || {};
+    currentAvatars[meId] = "rotate"; // Default to rotating avatar
+    await write(() => S.db.doc("team/settings").update({ avatars: currentAvatars }), err);
+    if (!err.textContent) {
+      toast("Atölyeye davet edildiniz! Hoş geldiniz!");
+      ls.remove('atolye-invite'); // Clear the invite token after use
+    }
   }
 
   // Her giriste ping satiri kontrolu/olusturma (406 hatasini onlemek icin)
@@ -1374,13 +1400,22 @@ $("f-upd").addEventListener("submit", async e => {
 });
 
 /* ---------- settings ---------- */
+function updateInviteLink() {
+  const invLinkEl = $("inv-link-value");
+  if (invLinkEl && S.settings && S.settings.inviteToken) {
+    const link = location.origin + location.pathname + "?invite=" + S.settings.inviteToken;
+    invLinkEl.textContent = link;
+  } else if (invLinkEl) {
+    invLinkEl.textContent = location.origin + location.pathname;
+  }
+}
+
 $("btn-settings").addEventListener("click", () => {
   const pop = $("pop-settings"); pop.hidden = !pop.hidden;
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) {
     // Populate project URL in invite link field
-    const invLinkEl = $("inv-link-value");
-    if (invLinkEl) invLinkEl.textContent = location.origin + location.pathname;
+    updateInviteLink();
   }
 });
 document.addEventListener("click", e => {
@@ -1391,10 +1426,22 @@ $("f-game").addEventListener("submit", async e => {
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adi kaydedildi");
 });
 
-/* invite link button in settings - just copy the project URL */
+/* invite link button in settings - copy the project URL with invite token */
 $("btn-copy-invite").addEventListener("click", () => {
-  const link = location.origin + location.pathname;
-  navigator.clipboard.writeText(link).then(() => toast("Proje linki kopyalandi")).catch(() => toast("Kopyalanamadi"));
+  const link = S.settings && S.settings.inviteToken
+    ? location.origin + location.pathname + "?invite=" + S.settings.inviteToken
+    : location.origin + location.pathname;
+  navigator.clipboard.writeText(link).then(() => toast("Davet linki kopyalandi")).catch(() => toast("Kopyalanamadi"));
+});
+
+/* generate new invite link button */
+$("btn-generate-invite").addEventListener("click", async () => {
+  if (!S.settings || !S.meId) return;
+  const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  if (await write(() => S.db.doc("team/settings").update({ inviteToken: newToken }))) {
+    updateInviteLink();
+    toast("Yeni davet linki olusturuldu");
+  }
 });
 
 $("btn-logout").addEventListener("click", () => {
