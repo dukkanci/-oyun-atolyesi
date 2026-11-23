@@ -28,6 +28,8 @@ jobs:
         run: |
           mkdir -p public/efsane-proje
           cp dist/index.html public/efsane-proje/index.html
+          cp dist/manifest.json public/efsane-proje/manifest.json
+          cp dist/sw.js public/efsane-proje/sw.js
           cp -r ses public/efsane-proje/ses
 
       - name: Upload artifact
