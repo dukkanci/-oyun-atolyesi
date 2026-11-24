@@ -28,6 +28,18 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
+
+// HTML escaping utility to prevent XSS
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&#039;');
+}
+
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -1841,7 +1853,7 @@ function showUserListModal() {
           ? '<p class="empty">Henuz kullanici yok.</p>'
           : users.map(u => `
             <div class="user-item" data-id="${u.id}">
-              <span class="user-name">${u.name}${u.isCurrent ? ' (Sen)' : ''}</span>
+              <span class="user-name">${escapeHtml(u.name)}${u.isCurrent ? ' (Sen)' : ''}</span>
               ${!u.isCurrent ? `<button class="btn danger btn-sm user-remove" data-id="${u.id}" title="Kullaniciyi cikar">Cikar</button>` : ''}
             </div>
           `).join('')}
