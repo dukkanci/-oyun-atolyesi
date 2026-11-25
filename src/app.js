@@ -2192,32 +2192,31 @@ async function startPresence() {
     let typingTimer = null, typingOn = false;
     const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
     addSafeListener($("chat-in"), "input", () => {
+      setTyping(!!$("chat-in").value.trim());
+      clearSafeTimeout(typingTimer); typingTimer = setSafeTimeout(() => setTyping(false), 3000);
+    }, {}, 'chat-typing-input');
+    addSafeListener($("f-chat"), "submit", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-submit');
+    addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } }, {}, 'chat-typing-keydown');
+    addSafeListener($("chat-in"), "blur", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-blur');
+    room.onPeers(ch => {
+      const typing = new Set();
+      for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
+      S.typing = typing; renderTyping();
+      for (const p of ch.left)
+        if (p.kind === "viewer" && p.by && p.by !== S.meId && !ch.peers.some(q => q.by === p.by)) markLastSeen(p.by);
+      const on = {};
+      for (const p of ch.peers) if (p.kind === "viewer" && p.by) {
+        const vis = !p.presence || p.presence.visible !== false;
+        on[p.by] = on[p.by] === "on" || vis ? "on" : "away";
+      }
+      S.online = on;
+      renderPeople(S.lastIds || new Set());
+    }, () => {});
+    startVoiceCall(room);
   } catch (e) {
     error("startPresence error:", e);
     voiceFallback();
   }
-}
-    setTyping(!!$("chat-in").value.trim());
-    clearSafeTimeout(typingTimer); typingTimer = setSafeTimeout(() => setTyping(false), 3000);
-  }, {}, 'chat-typing-input');
-  addSafeListener($("f-chat"), "submit", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-submit');
-  addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } }, {}, 'chat-typing-keydown');
-  addSafeListener($("chat-in"), "blur", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-blur');
-  room.onPeers(ch => {
-    const typing = new Set();
-    for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
-    S.typing = typing; renderTyping();
-    for (const p of ch.left)
-      if (p.kind === "viewer" && p.by && p.by !== S.meId && !ch.peers.some(q => q.by === p.by)) markLastSeen(p.by);
-    const on = {};
-    for (const p of ch.peers) if (p.kind === "viewer" && p.by) {
-      const vis = !p.presence || p.presence.visible !== false;
-      on[p.by] = on[p.by] === "on" || vis ? "on" : "away";
-    }
-    S.online = on;
-    renderPeople(S.lastIds || new Set());
-  }, () => {});
-  startVoiceCall(room);
 }
 /* live voice chat: WebRTC audio between everyone who joined, signalled over room topic "voice";
    presence.voice marks who is in the call, and of each pair the lower peer label sends the offer */
