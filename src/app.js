@@ -40,6 +40,12 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+// Safe logging - only in development
+const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+function log(...args) { if (isDev) console.log(...args); }
+function warn(...args) { if (isDev) console.warn(...args); }
+function error(...args) { if (isDev) console.error(...args); }
+
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -55,13 +61,86 @@ function h(tag, attrs, ...kids) {
 function kindVars(k) { return `--kc:var(--k-${k});--kb:var(--k-${k}-bg);--ko:var(--k-${k}-on)`; }
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
+  clearSafeTimeout(toast.t); toast.t = setSafeTimeout(() => (t.hidden = true), 2200);
 }
+
+// Timer/Event cleanup utilities
+const timers = new Map();
+const intervals = new Map();
+const listeners = new Map();
+
+let timerIdCounter = 0;
+let intervalIdCounter = 0;
+
+function setSafeTimeout(fn, delay, id) {
+  const uid = id || 'timeout_' + (++timerIdCounter);
+  if (timers.has(uid)) clearTimeout(timers.get(uid));
+  const idNum = setTimeout(fn, delay);
+  timers.set(uid, idNum);
+  return uid;
+}
+
+function clearSafeTimeout(id) {
+  if (timers.has(id)) {
+    clearTimeout(timers.get(id));
+    timers.delete(id);
+  }
+}
+
+function setSafeInterval(fn, delay, id) {
+  const uid = id || 'interval_' + (++intervalIdCounter);
+  if (intervals.has(uid)) clearInterval(intervals.get(uid));
+  const idNum = setInterval(fn, delay);
+  intervals.set(uid, idNum);
+  return uid;
+}
+
+function clearSafeInterval(id) {
+  if (intervals.has(id)) {
+    clearInterval(intervals.get(id));
+    intervals.delete(id);
+  }
+}
+
+function addSafeListener(target, event, handler, options, id) {
+  target.addEventListener(event, handler, options);
+  if (!listeners.has(id)) listeners.set(id, []);
+  listeners.get(id).push({ target, event, handler, options });
+}
+
+function clearListeners(id) {
+  if (listeners.has(id)) {
+    for (const l of listeners.get(id)) {
+      l.target.removeEventListener(l.event, l.handler, l.options);
+    }
+    listeners.delete(id);
+  }
+}
+
+function clearAllTimers() {
+  for (const [, id] of timers) clearSafeTimeout(id);
+  timers.clear();
+  for (const [, id] of intervals) clearSafeInterval(id);
+  intervals.clear();
+}
+
+function clearAllListeners() {
+  for (const [, list] of listeners) {
+    for (const l of list) l.target.removeEventListener(l.event, l.handler, l.options);
+  }
+  listeners.clear();
+}
+
+// Cleanup on page unload
+window.addEventListener('pagehide', () => {
+  clearAllTimers();
+  clearAllListeners();
+});
 // Persistent toast for SW update notification
 function showToast(msg, persistent) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t);
-  if (!persistent) toast.t = setTimeout(() => (t.hidden = true), 2200);
+  clearSafeTimeout(toast.t);
+  if (!persistent) toast.t = setSafeTimeout(() => (t.hidden = true), 2200);
 }
 // Update offline banner in header
 function updateOfflineBanner() {
@@ -155,7 +234,7 @@ function rotPick(id) {
   return AVATARS[keys[(rotSlot() * 3 + i * 5 + Math.floor(i / 2)) % n]];
 }
 let lastSlot = rotSlot();
-setInterval(() => { if (rotSlot() !== lastSlot) { lastSlot = rotSlot(); if (S.settings) render(); } }, 60000);
+setSafeInterval(() => { if (rotSlot() !== lastSlot) { lastSlot = rotSlot(); if (S.settings) render(); } }, 60000);
 function avatar(id, cls) {
   const p = S.profiles[id], style = "box-shadow:0 0 0 2px " + ucol(id);
   const raw = S.settings && S.settings.avatars && S.settings.avatars[id];
@@ -235,7 +314,7 @@ async function boot() {
       const isPreview = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       const swPath = isPreview ? '/sw.js' : '/-oyun-atolyesi/efsane-proje/sw.js';
       const reg = await navigator.serviceWorker.register(swPath);
-      console.log('SW registered:', reg.scope);
+      log('SW registered:', reg.scope);
       // Listen for SW updates
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
@@ -248,7 +327,7 @@ async function boot() {
         }
       });
     } catch (e) {
-      console.warn('SW registration failed:', e);
+      warn('SW registration failed:', e);
     }
 
     // Listen for online/offline events
@@ -263,7 +342,7 @@ async function boot() {
     const generatedMeId = generateUserId(storedUsername);
     const storedMeId = ls.get("atolye-meid");
     if (storedMeId && storedMeId !== generateUserId(storedUsername)) {
-      console.warn("MeId uyusmazligi, yeniden hesaplaniyor:", storedMeId, "->", generateUserId(storedUsername));
+      warn("MeId uyusmazligi, yeniden hesaplaniyor:", storedMeId, "->", generateUserId(storedUsername));
     }
     S.meId = generateUserId(storedUsername);
     S.username = storedUsername;
@@ -286,12 +365,12 @@ async function boot() {
     try {
       const me = await user?.me();
       if (me && me.id && me.id !== S.meId) {
-        console.warn("MeId uyusmazligi, localStorage guncelleniyor:", S.meId, "->", me.id);
+        warn("MeId uyusmazligi, localStorage guncelleniyor:", S.meId, "->", me.id);
         ls.set("atolye-meid", me.id);
         S.meId = me.id;
       }
     } catch (e) {
-      console.warn("Oturum dogrulama hatasi:", e);
+      warn("Oturum dogrulama hatasi:", e);
     }
   }
 
@@ -310,7 +389,7 @@ async function boot() {
     try {
       S.settings = JSON.parse(storedSettings);
     } catch (e) {
-      console.warn('Settings parse hatasi:', e);
+      warn('Settings parse hatasi:', e);
       S.settings = null;
     }
   } else {
@@ -335,7 +414,7 @@ async function boot() {
   }, () => show("s-noaccess"));
 
   // Fix: gizli dosya input'una name attribute ekle (form validation hatasi onlemi)
-  setTimeout(() => {
+  setSafeTimeout(() => {
     const fileInput = document.getElementById("nw-file");
     if (fileInput && !fileInput.name) {
       fileInput.name = "nw-file";
@@ -360,9 +439,9 @@ function loadUserWorkshops() {
   try {
     const stored = ls.get(WORKSHOPS_KEY);
     S.workshops = stored ? JSON.parse(stored) : [];
-    console.log("🔍 Loaded user workshops:", S.workshops);
+    log("🔍 Loaded user workshops:", S.workshops);
   } catch (e) {
-    console.warn("Workshops load error:", e);
+    warn("Workshops load error:", e);
     S.workshops = [];
   }
 }
@@ -371,7 +450,7 @@ function saveUserWorkshops() {
   try {
     ls.set(WORKSHOPS_KEY, JSON.stringify(S.workshops));
   } catch (e) {
-    console.warn("Workshops save error:", e);
+    warn("Workshops save error:", e);
   }
 }
 
@@ -442,7 +521,7 @@ function switchWorkshop(workshopId) {
     try {
       S.settings = JSON.parse(storedSettings);
     } catch (e) {
-      console.warn("Settings parse error:", e);
+      warn("Settings parse error:", e);
       S.settings = null;
     }
   }
@@ -503,16 +582,16 @@ function showApp() {
 }
 
 function route() {
-  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
+  log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
   const st = S.settings;
   if (st === undefined) {
-    console.log("🔍 route: settings undefined, showing s-loading");
+    log("🔍 route: settings undefined, showing s-loading");
     return show("s-loading");
   }
 
   // Check if user has username
   if (!S.meId) {
-    console.log("🔍 route: no meId, showing s-login");
+    log("🔍 route: no meId, showing s-login");
     show("s-login");
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
@@ -522,23 +601,23 @@ function route() {
     return;
   }
 
-  console.log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
+  log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
 
   // User has username - check if workshop selected
   if (!S.currentWorkshop) {
     // Check if we should show welcome screen or lobby
     const showWelcome = !S.welcomeShown;
     if (showWelcome) {
-      console.log("🔍 route: no workshop selected, showing welcome");
+      log("🔍 route: no workshop selected, showing welcome");
       showWelcomeScreen();
     } else {
-      console.log("🔍 route: no workshop selected, showing lobby");
+      log("🔍 route: no workshop selected, showing lobby");
       showLobby();
     }
     return;
   }
 
-  console.log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
+  log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
 
   // Workshop selected - show app
   showApp();
@@ -595,16 +674,16 @@ function showApp() {
 }
 
 function route() {
-  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
+  log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
   const st = S.settings;
   if (st === undefined) {
-    console.log("🔍 route: settings undefined, showing s-loading");
+    log("🔍 route: settings undefined, showing s-loading");
     return show("s-loading");
   }
 
   // Check if user has username
   if (!S.meId) {
-    console.log("🔍 route: no meId, showing s-login");
+    log("🔍 route: no meId, showing s-login");
     show("s-login");
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
@@ -614,23 +693,23 @@ function route() {
     return;
   }
 
-  console.log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
+  log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
 
   // User has username - check if workshop selected
   if (!S.currentWorkshop) {
     // Check if we should show welcome screen or lobby
     const showWelcome = !S.welcomeShown;
     if (showWelcome) {
-      console.log("🔍 route: no workshop selected, showing welcome");
+      log("🔍 route: no workshop selected, showing welcome");
       showWelcomeScreen();
     } else {
-      console.log("🔍 route: no workshop selected, showing lobby");
+      log("🔍 route: no workshop selected, showing lobby");
       showLobby();
     }
     return;
   }
 
-  console.log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
+  log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
 
   // Workshop selected - show app
   showApp();
@@ -666,22 +745,22 @@ function route() {
 }
 
 $("f-login").addEventListener("submit", async e => {
-  console.log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
+  log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
   e.preventDefault();
   const username = $("lg-username").value.trim();
   const err = $("lg-err");
 
-  console.log("🔍 Form validation", { username });
+  log("🔍 Form validation", { username });
   if (!username) { err.textContent = "Kullanici adi girin."; return; }
   if (username.length < 2) { err.textContent = "Kullanici adi en az 2 karakter olmali."; return; }
 
   const meId = generateUserId(username);
-  console.log("🔍 Generated meId", meId);
+  log("🔍 Generated meId", meId);
   ls.set(LS_USERNAME, username);
   S.meId = meId;
   S.username = username;
   S.canWrite = true;
-  console.log("🔍 S.meId set", S.meId);
+  log("🔍 S.meId set", S.meId);
 
   // Load user's workshops from localStorage
   loadUserWorkshops();
@@ -692,7 +771,7 @@ $("f-login").addEventListener("submit", async e => {
     // Find workshop with this invite token
     const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken);
     if (targetWorkshop) {
-      console.log("🔍 Valid invitation token found, switching to workshop:", targetWorkshop.id);
+      log("🔍 Valid invitation token found, switching to workshop:", targetWorkshop.id);
       // Switch to the target workshop
       S.currentWorkshop = targetWorkshop.id;
       // Load workshop settings
@@ -702,7 +781,7 @@ $("f-login").addEventListener("submit", async e => {
         try {
           S.settings = JSON.parse(storedSettings);
         } catch (e) {
-          console.warn('Settings parse error:', e);
+          warn('Settings parse error:', e);
           S.settings = null;
         }
       }
@@ -715,14 +794,14 @@ $("f-login").addEventListener("submit", async e => {
         ls.remove('atolye-invite'); // Clear the invite token after use
       }
     } else {
-      console.warn("🔍 Invalid invitation token, no workshop found with this token");
+      warn("🔍 Invalid invitation token, no workshop found with this token");
       toast("Geçersiz davet kodu!");
     }
     ls.remove('atolye-invite'); // Clear the invite token after use
   }
 
   err.textContent = "";
-  console.log("🔍 Calling route() - showing lobby");
+  log("🔍 Calling route() - showing lobby");
   route();
 });
 
@@ -740,7 +819,7 @@ $("btn-create-workshop").addEventListener("click", () => {
   const modal = $("create-workshop-modal");
   if (modal) {
     modal.hidden = false;
-    setTimeout(() => {
+    setSafeTimeout(() => {
       const input = $("cw-game");
       if (input) input.focus();
     }, 100);
@@ -774,7 +853,7 @@ $("btn-join-workshop").addEventListener("click", () => {
   const modal = $("join-workshop-modal");
   if (modal) {
     modal.hidden = false;
-    setTimeout(() => {
+    setSafeTimeout(() => {
       const input = $("jw-code");
       if (input) input.focus();
     }, 100);
@@ -872,7 +951,7 @@ function playSound(k, force) {
 const PRIO = ["done", "yes", "no", "new", "reply", "work", "edit"];
 const topSound = items => PRIO.find(p => items.some(i => i.snd === p)) || "new";
 for (const [k, s] of Object.entries(SOUNDS)) $("snd-list").append(h("button", { type: "button", class: "chip",
-  onclick: () => { unlockAudio(); setTimeout(() => playSound(k, true), 30); } }, "▶ " + s.label));
+  onclick: () => { unlockAudio(); setSafeTimeout(() => playSound(k, true), 30); } }, "▶ " + s.label));
 
 function renderSoundBtn() {
   const b = $("btn-sound");
@@ -881,7 +960,7 @@ function renderSoundBtn() {
 }
 $("btn-sound").addEventListener("click", () => {
   S.sound = !S.sound; ls.set("atolye-sound", S.sound ? "on" : "off");
-  renderSoundBtn(); unlockAudio(); setTimeout(chime, 30);
+  renderSoundBtn(); unlockAudio(); setSafeTimeout(chime, 30);
 });
 renderSoundBtn();
 
@@ -925,7 +1004,7 @@ function notify(item) {
       h("div", { class: "nt" }, item.title),
       item.quote && h("div", { class: "nq" }, item.quote)));
   $("notifs").prepend(el);
-  setTimeout(() => el.remove(), 8000);
+  setSafeTimeout(() => el.remove(), 8000);
 }
 
 /* ---------- ping ("durt") ---------- */
@@ -1050,21 +1129,21 @@ function onChat(snap) {
   render();
 }
 function renderChat(forceBottom) {
-  const log = $("chat-log");
-  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
-  log.replaceChildren();
-  if (!S.chat.length) log.append(h("div", { class: "empty" }, h("strong", {}, "Sohbet bos"),
+  const chatLog = $("chat-log");
+  const nearBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 80;
+  chatLog.replaceChildren();
+  if (!S.chat.length) chatLog.append(h("div", { class: "empty" }, h("strong", {}, "Sohbet bos"),
     "Fikirlerden bagimsiz konusmak icin buraya yaz. Mesajlar kaydedilir, ikiniz de gorursunuz."));
   let lastDay = "", lastBy = null, lastAt = 0, lineDone = false;
   const lastMine = [...S.chat].reverse().find(x => x.a === S.meId);
   for (const m of S.chat) {
     if (!lineDone && S.view === "chat" && S.unreadFrom != null && m.a !== S.meId && m.at > S.unreadFrom && m.at <= S.unreadUntil) {
       const cnt = S.chat.filter(x => x.a !== S.meId && x.at > S.unreadFrom && x.at <= S.unreadUntil).length;
-      log.append(h("div", { class: "unread-line" }, cnt + " okunmamis mesaj")); lineDone = true; lastBy = null;
+      chatLog.append(h("div", { class: "unread-line" }, cnt + " okunmamis mesaj")); lineDone = true; lastBy = null;
     }
     const d = new Date(m.at);
     const day = d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
-    if (day !== lastDay) { log.append(h("div", { class: "day" }, day)); lastDay = day; lastBy = null; }
+    if (day !== lastDay) { chatLog.append(h("div", { class: "day" }, day)); lastDay = day; lastBy = null; }
     const mine = m.a === S.meId, grouped = lastBy === m.a && m.at - lastAt < 5 * 60 * 1000;
     let del = null;
     if (mine) {
@@ -1074,7 +1153,7 @@ function renderChat(forceBottom) {
         await write(() => S.db.doc("chat/" + m.id).delete());
       });
     }
-    log.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
+    chatLog.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
       grouped ? h("span", { class: "ph" }) : avatar(m.a, "sm"),
       h("div", { class: "mb" },
         !grouped && h("div", { class: "mh" }, nameEl(m.a), " ", h("span", { class: "mt" }, d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }))),
@@ -1100,7 +1179,7 @@ function renderChat(forceBottom) {
           mine && m.t && S.editing !== m.id ? h("button", { class: "mdel", type: "button", onclick: () => startEdit(m) }, "✎ duzenle") : null, del))));
     lastBy = m.a; lastAt = m.at;
   }
-  if (forceBottom || nearBottom) log.scrollTop = log.scrollHeight;
+  if (forceBottom || nearBottom) chatLog.scrollTop = chatLog.scrollHeight;
   const ta = S.editing && $("edit-in");
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
@@ -1157,7 +1236,7 @@ async function sendChat() {
   inp.value = ""; S.chatImgs = []; S.chatFiles = []; renderChatAtt();
   const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
   const ok = await write(() => S.db.collection("chat").add({ a: S.meId, t: t.slice(0, 4000), at: Date.now(), imgs, files, re }));
-  if (!ok) { inp.value = t; S.chatImgs = imgs; S.chatFiles = files; renderChatAtt(); S.replyTo = re; renderReplyBar(); } else setTimeout(() => renderChat(true), 0);
+  if (!ok) { inp.value = t; S.chatImgs = imgs; S.chatFiles = files; renderChatAtt(); S.replyTo = re; renderReplyBar(); } else setSafeTimeout(() => renderChat(true), 0);
 }
 /* voice messages: record with the microphone, upload the clip as an asset (webm/mp4 container), store {voice:{id,type,dur}} in chat */
 const fmtDur = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
@@ -1173,12 +1252,12 @@ async function toggleVoice() {
   catch (e) { toast("Claude sayfasi mikrofona izin vermiyor. Sesli sohbet icin 📞 dugmesini kullan; yeni sekmede acilir."); return; }
   const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
   const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], start = Date.now();
-  const tick = setInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
+  const tick = setSafeInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
   S.rec = { mr };
   btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); btn.textContent = "■ 0:00"; btn.title = "Kaydi bitir ve gonder";
   mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = async () => {
-    clearInterval(tick); stream.getTracks().forEach(t => t.stop()); S.rec = null;
+    clearSafeInterval(tick); stream.getTracks().forEach(t => t.stop()); S.rec = null;
     btn.classList.remove("rec"); btn.setAttribute("aria-pressed", "false"); btn.textContent = "🎤"; btn.title = "Sesli mesaj kaydet: bir kez tikla baslasin, tekrar tikla gonderilsin";
     const dur = (Date.now() - start) / 1000;
     if (dur < 0.7 || !chunks.length) { toast("Kayit cok kisa, gonderilmedi."); return; }
@@ -1190,19 +1269,19 @@ async function toggleVoice() {
     try { r = await S.assets.upload(blob, { type }); } catch (e) { toast(assetErr(e)); return; }
     const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
     if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), voice: { id: r.id, type, dur: Math.round(dur) }, re })))
-      setTimeout(() => renderChat(true), 0);
+      setSafeTimeout(() => renderChat(true), 0);
   };
   mr.start(1000);
-  if (S.recMax) clearTimeout(S.recMax);
-  S.recMax = setTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
+  if (S.recMax) clearSafeTimeout(S.recMax);
+  S.recMax = setSafeTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
 }
 $("voice-btn").addEventListener("click", toggleVoice);
 /* read receipts: each person keeps chatseen/<id> = time they last looked at the chat */
 S.seenBy = {};
 let seenTimer = null;
 function pushSeen() {
-  clearTimeout(seenTimer);
-  seenTimer = setTimeout(() => { if (S.db && S.meId) S.db.doc("chatseen/" + S.meId).set({ at: Date.now() }).catch(() => {}); }, 800);
+  clearSafeTimeout(seenTimer);
+  seenTimer = setSafeTimeout(() => { if (S.db && S.meId) S.db.doc("chatseen/" + S.meId).set({ at: Date.now() }).catch(() => {}); }, 800);
 }
 function seenTick(m, isLast) {
   const seenIds = Object.entries(S.seenBy || {}).filter(([id, v]) => id !== S.meId && v && v.at >= m.at).map(([id]) => id);
@@ -1264,7 +1343,7 @@ function jumpTo(id) {
   if (!el) { toast("Bu mesaj artik sohbette yok"); return; }
   el.scrollIntoView({ block: "center", behavior: "smooth" });
   el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
-  setTimeout(() => el.classList.remove("flash"), 1500);
+  setSafeTimeout(() => el.classList.remove("flash"), 1500);
 }
 $("chat-in").addEventListener("keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } });
 $("chat-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); });
@@ -1329,7 +1408,7 @@ async function sendCustomSticker(st) {
   if (!S.meId) return;
   toggleEmoji(false);
   if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), cst: { img: st.img, label: st.label || "", by: st.a } })))
-    setTimeout(() => renderChat(true), 0);
+    setSafeTimeout(() => renderChat(true), 0);
 }
 async function addCustomSticker(e) {
   const f = e.target.files[0]; e.target.value = "";
@@ -1355,7 +1434,7 @@ function insertEmoji(e) {
 async function sendSticker(key) {
   if (!S.meId) return;
   toggleEmoji(false);
-  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setTimeout(() => renderChat(true), 0);
+  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setSafeTimeout(() => renderChat(true), 0);
 }
 $("emoji-btn").addEventListener("click", () => toggleEmoji());
 
@@ -1365,7 +1444,7 @@ function togglePollForm(open) {
   const pop = $("poll-pop");
   pop.hidden = open === undefined ? !pop.hidden : !open;
   $("poll-btn").setAttribute("aria-expanded", String(!pop.hidden));
-  if (!pop.hidden) { if (!S.pollDraft) S.pollDraft = { q: "" }; renderPollForm(); setTimeout(() => $("poll-q") && $("poll-q").focus(), 0); }
+  if (!pop.hidden) { if (!S.pollDraft) S.pollDraft = { q: "" }; renderPollForm(); setSafeTimeout(() => $("poll-q") && $("poll-q").focus(), 0); }
 }
 function renderPollForm() {
   const d = S.pollDraft, pop = $("poll-pop");
@@ -1382,7 +1461,7 @@ async function startPoll() {
   const q = S.pollDraft.q.trim();
   if (!q) { $("poll-err").textContent = "Oylamanin konusunu yaz."; return; }
   if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), poll: { q: q.slice(0, 200), opts: ["✓ Onayliyorum", "✕ Reddediyorum"], yn: true, closed: false }, pv: {} }), $("poll-err"))) {
-    S.pollDraft = null; togglePollForm(false); setTimeout(() => renderChat(true), 0);
+    S.pollDraft = null; togglePollForm(false); setSafeTimeout(() => renderChat(true), 0);
   }
 }
 function pollEl(m) {
@@ -1529,7 +1608,7 @@ function renderJobs() {
 }
 $("f-ai").addEventListener("submit", e => { e.preventDefault(); addJob(); });
 $("ai-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
-setInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
+setSafeInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
 
 /* ---------- game progress + release notes ---------- */
 const UPD_TYPES = { ozellik: ["Yeni ozellik", "gorev"], duzeltme: ["Hata duzeltme", "hata"], icerik: ["Icerik / hikâye", "hikaye"], denge: ["Denge / ayar", "mekanik"], gorsel: ["Gorsel / ses", "sanat"], diger: ["Diger", "fikir"] };
@@ -1707,7 +1786,7 @@ function updEditForm(u) {
     h("div", { class: "actions" },
       h("button", { class: "btn primary sm", type: "button", onclick: save }, "Kaydet"),
       h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.updEdit = null; renderUpd(); } }, "Vazgec")));
-  if (foc && /^ue-/.test(foc)) setTimeout(() => { const el = $(foc); if (el) el.focus(); }, 0);
+  if (foc && /^ue-/.test(foc)) setSafeTimeout(() => { const el = $(foc); if (el) el.focus(); }, 0);
   return box;
 }
 async function saveProgress(patch) {
@@ -1912,7 +1991,7 @@ async function removeUser(userId) {
 
     toast("Kullanici cikarildi");
   } catch (e) {
-    console.error("Kullanici cikarma hatasi:", e);
+    error("Kullanici cikarma hatasi:", e);
     toast("Kullanici cikarilamadi: " + e.message);
   }
 }
@@ -2022,9 +2101,9 @@ function setView(v) {
   $("wrap").classList.toggle("chatmode", wide);
   $("chat").hidden = !chat; $("ai").hidden = !ai; $("upd").hidden = !upd; $("cards").hidden = wide; $("mainbar").hidden = wide;
   if (upd) { markUpdSeen(); renderUpd(); }
-  if (ai) setTimeout(() => $("ai-in").focus(), 0);
+  if (ai) setSafeTimeout(() => $("ai-in").focus(), 0);
   renderFilters(); renderCards();
-  if (chat) { renderChat(true); markChatSeen(); setTimeout(() => $("chat-in").focus(), 0); }
+  if (chat) { renderChat(true); markChatSeen(); setSafeTimeout(() => $("chat-in").focus(), 0); }
 }
 $("tab-active").addEventListener("click", () => setView("active"));
 $("tab-star").addEventListener("click", () => setView("star"));
@@ -2108,11 +2187,11 @@ async function startPresence() {
   const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
   $("chat-in").addEventListener("input", () => {
     setTyping(!!$("chat-in").value.trim());
-    clearTimeout(typingTimer); typingTimer = setTimeout(() => setTyping(false), 3000);
+    clearSafeTimeout(typingTimer); typingTimer = setSafeTimeout(() => setTyping(false), 3000);
   });
-  $("f-chat").addEventListener("submit", () => { clearTimeout(typingTimer); setTyping(false); });
-  $("chat-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearTimeout(typingTimer); setTyping(false); } });
-  $("chat-in").addEventListener("blur", () => { clearTimeout(typingTimer); setTyping(false); });
+  $("f-chat").addEventListener("submit", () => { clearSafeTimeout(typingTimer); setTyping(false); });
+  $("chat-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } });
+  $("chat-in").addEventListener("blur", () => { clearSafeTimeout(typingTimer); setTyping(false); });
   room.onPeers(ch => {
     const typing = new Set();
     for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
@@ -2259,7 +2338,7 @@ function presLabel(id, st) {
   const at = S.lastSeenOnline[id];
   return PRES[st] + (st === "off" && at && typeof at === 'number' && !isNaN(at) ? " · son gorulme " + ago(at) : "");
 }
-setInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
+setSafeInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
 S.typing = new Set();
 function renderTyping() {
   const box = $("typing"), ids = [...S.typing];
