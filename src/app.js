@@ -331,8 +331,8 @@ async function boot() {
     }
 
     // Listen for online/offline events
-    window.addEventListener('online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); });
-    window.addEventListener('offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); });
+    addSafeListener(window, 'online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); }, {}, 'online-listener');
+    addSafeListener(window, 'offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); }, {}, 'offline-listener');
   }
 
   // Check for stored username
@@ -357,8 +357,8 @@ async function boot() {
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
   const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
-  document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
-  window.addEventListener("pagehide", markSeen);
+  addSafeListener(document, "visibilitychange", () => { if (document.hidden) markSeen(); }, {}, 'visibility-mark-seen');
+  addSafeListener(window, "pagehide", markSeen, {}, 'pagehide-mark-seen');
 
   // Oturum dogrulama: localStorage'da kullanici varsa meId'yi dogrula
   if (S.meId) {
