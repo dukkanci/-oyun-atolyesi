@@ -265,7 +265,7 @@ function renderAvList() {
   }
   if (S.assets && S.meId) {
     const inp = h("input", { type: "file", id: "av-file", accept: IMG_TYPES.join(","), hidden: true });
-    inp.addEventListener("change", async () => {
+    addSafeListener(inp, "change", async () => {
       const f = inp.files[0]; inp.value = "";
       if (!f) return;
       const got = await uploadMedia([f], { set textContent(v) { if (v) toast(v); } });
@@ -316,14 +316,15 @@ async function boot() {
       const reg = await navigator.serviceWorker.register(swPath);
       log('SW registered:', reg.scope);
       // Listen for SW updates
-      reg.addEventListener('updatefound', () => {
+      // Listen for SW updates
+      addSafeListener(reg, 'updatefound', () => {
         const newWorker = reg.installing;
         if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
+          addSafeListener(newWorker, 'statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               showToast('Yeni sürüm hazır. Sayfayı yenileyin.', true);
             }
-          });
+          }, {}, 'sw-statechange');
         }
       });
     } catch (e) {
@@ -744,7 +745,7 @@ function route() {
   render();
 }
 
-$("f-login").addEventListener("submit", async e => {
+addSafeListener($("f-login"), "submit", async e => {
   log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
   e.preventDefault();
   const username = $("lg-username").value.trim();
@@ -815,7 +816,7 @@ $("btn-logout").addEventListener("click", () => {
 });
 
 /* Lobby event handlers */
-$("btn-create-workshop").addEventListener("click", () => {
+addSafeListener($("btn-create-workshop"), "click", () => {
   const modal = $("create-workshop-modal");
   if (modal) {
     modal.hidden = false;
@@ -826,12 +827,12 @@ $("btn-create-workshop").addEventListener("click", () => {
   }
 });
 
-$("btn-cancel-create").addEventListener("click", () => {
+addSafeListener($("btn-cancel-create"), "click", () => {
   const modal = $("create-workshop-modal");
   if (modal) modal.hidden = true;
 });
 
-$("f-create-workshop").addEventListener("submit", async e => {
+addSafeListener($("f-create-workshop"), "submit", async e => {
   e.preventDefault();
   const gameName = $("cw-game").value.trim();
   const err = $("cw-err");
@@ -849,7 +850,7 @@ $("f-create-workshop").addEventListener("submit", async e => {
   }
 });
 
-$("btn-join-workshop").addEventListener("click", () => {
+addSafeListener($("btn-join-workshop"), "click", () => {
   const modal = $("join-workshop-modal");
   if (modal) {
     modal.hidden = false;
@@ -860,12 +861,12 @@ $("btn-join-workshop").addEventListener("click", () => {
   }
 });
 
-$("btn-cancel-join").addEventListener("click", () => {
+addSafeListener($("btn-cancel-join"), "click", () => {
   const modal = $("join-workshop-modal");
   if (modal) modal.hidden = true;
 });
 
-$("f-join-workshop").addEventListener("submit", async e => {
+addSafeListener($("f-join-workshop"), "submit", async e => {
   e.preventDefault();
   const code = $("jw-code").value.trim();
   const err = $("jw-err");
@@ -875,7 +876,7 @@ $("f-join-workshop").addEventListener("submit", async e => {
   window.location.href = link;
 });
 
-$("btn-logout-lobby").addEventListener("click", () => {
+addSafeListener($("btn-logout-lobby"), "click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
   S.username = null;
@@ -884,17 +885,16 @@ $("btn-logout-lobby").addEventListener("click", () => {
   route();
 });
 
-$("btn-open-lobby").addEventListener("click", () => {
+addSafeListener($("btn-open-lobby"), "click", () => {
   S.welcomeShown = true;
   showLobby();
 });
 
-/* Modal close handlers */
-document.addEventListener("click", e => {
+addSafeListener(document, "click", e => {
   if (e.target.classList.contains("modal-overlay") || e.target.classList.contains("modal-close")) {
     document.querySelectorAll(".modal-overlay").forEach(m => m.hidden = true);
   }
-});
+}, {}, 'modal-close-handler');
 
 /* ---------- notifications & sound ---------- */
 let audioCtx = null;
