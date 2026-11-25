@@ -132,10 +132,10 @@ function clearAllListeners() {
 }
 
 // Cleanup on page unload
-window.addEventListener('pagehide', () => {
+addSafeListener(window, 'pagehide', () => {
   clearAllTimers();
   clearAllListeners();
-});
+}, {}, 'global-pagehide-cleanup');
 // Persistent toast for SW update notification
 function showToast(msg, persistent) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
@@ -806,14 +806,14 @@ addSafeListener($("f-login"), "submit", async e => {
   route();
 });
 
-$("btn-logout").addEventListener("click", () => {
+addSafeListener($("btn-logout"), "click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
   S.username = null;
   S.canWrite = false;
   S.welcomeShown = false;
   route();
-});
+}, {}, 'btn-logout-login');
 
 /* Lobby event handlers */
 addSafeListener($("btn-create-workshop"), "click", () => {
@@ -905,7 +905,7 @@ function unlockAudio() {
     if (audioCtx.state === "suspended") audioCtx.resume();
   } catch (e) {}
 }
-for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, unlockAudio, { capture: true });
+for (const ev of ["pointerdown", "keydown"]) addSafeListener(document, ev, unlockAudio, { capture: true }, 'audio-unlock-' + ev);
 function chime() {
   if (!S.sound || !audioCtx || audioCtx.state !== "running") return;
   const t0 = audioCtx.currentTime;
@@ -958,10 +958,10 @@ function renderSoundBtn() {
   b.textContent = S.sound ? "Ses acik" : "Ses kapali";
   b.setAttribute("aria-pressed", String(S.sound));
 }
-$("btn-sound").addEventListener("click", () => {
+addSafeListener($("btn-sound"), "click", () => {
   S.sound = !S.sound; ls.set("atolye-sound", S.sound ? "on" : "off");
   renderSoundBtn(); unlockAudio(); setSafeTimeout(chime, 30);
-});
+}, {}, 'btn-sound-click');
 renderSoundBtn();
 
 function detectNews(prev, next) {
@@ -1102,13 +1102,13 @@ function markAllSeen() {
   S.f.fresh = false;
   markChatSeen(); render();
 }
-$("bell").addEventListener("click", () => {
+addSafeListener($("bell"), "click", () => {
   const pop = $("pop-bell"); pop.hidden = !pop.hidden;
   $("bell").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) fillBell();
-});
-document.addEventListener("click", e => { if (!e.target.closest("#bellwrap")) closeBell(); });
-$("fresh-clear").addEventListener("click", () => { S.f.fresh = false; renderCards(); });
+}, {}, 'bell-click');
+addSafeListener(document, "click", e => { if (!e.target.closest("#bellwrap")) closeBell(); }, {}, 'bell-close-outside');
+addSafeListener($("fresh-clear"), "click", () => { S.f.fresh = false; renderCards(); }, {}, 'fresh-clear-click');
 function onChat(snap) {
   const prev = S.chatIds;
   S.chat = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(m => typeof m.at === "number").reverse();
@@ -1148,10 +1148,10 @@ function renderChat(forceBottom) {
     let del = null;
     if (mine) {
       del = h("button", { class: "mdel", type: "button" }, "sil");
-      del.addEventListener("click", async () => {
+      addSafeListener(del, "click", async () => {
         if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "emin misin? tekrar tikla"; return; }
         await write(() => S.db.doc("chat/" + m.id).delete());
-      });
+      }, {}, 'chat-del-' + m.id);
     }
     chatLog.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
       grouped ? h("span", { class: "ph" }) : avatar(m.a, "sm"),
@@ -1275,7 +1275,7 @@ async function toggleVoice() {
   if (S.recMax) clearSafeTimeout(S.recMax);
   S.recMax = setSafeTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
 }
-$("voice-btn").addEventListener("click", toggleVoice);
+addSafeListener($("voice-btn"), "click", toggleVoice, {}, 'voice-btn-click');
 /* read receipts: each person keeps chatseen/<id> = time they last looked at the chat */
 S.seenBy = {};
 let seenTimer = null;
@@ -1299,11 +1299,11 @@ function cancelEdit() { S.editing = null; renderChat(false); }
 function editBox(m) {
   const ta = h("textarea", { class: "field", id: "edit-in", rows: "2", "aria-label": "Mesaji duzenle" });
   ta.value = S.editDraft;
-  ta.addEventListener("input", () => { S.editDraft = ta.value; });
-  ta.addEventListener("keydown", e => {
+  addSafeListener(ta, "input", () => { S.editDraft = ta.value; }, {}, 'edit-input-' + m.id);
+  addSafeListener(ta, "keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); saveEdit(m); }
     else if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
-  });
+  }, {}, 'edit-keydown-' + m.id);
   return h("div", { class: "editbox" }, ta, h("div", { class: "macts" },
     h("button", { class: "btn sm primary", type: "button", onclick: () => saveEdit(m) }, "Kaydet"),
     h("button", { class: "btn sm ghost", type: "button", onclick: cancelEdit }, "Iptal")));
@@ -1345,15 +1345,15 @@ function jumpTo(id) {
   el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   setSafeTimeout(() => el.classList.remove("flash"), 1500);
 }
-$("chat-in").addEventListener("keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } });
-$("chat-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); });
-$("chat-in").addEventListener("paste", e => {
+addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } }, {}, 'chat-in-keydown-escape');
+addSafeListener($("chat-file"), "change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); }, {}, 'chat-file-change');
+addSafeListener($("chat-in"), "paste", e => {
   const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
   if (fs.length) { e.preventDefault(); addChatImages(fs); }
-});
-$("chat").addEventListener("dragover", e => { e.preventDefault(); $("chat").classList.add("drag"); });
-$("chat").addEventListener("dragleave", e => { if (e.target === $("chat")) $("chat").classList.remove("drag"); });
-$("chat").addEventListener("drop", e => { e.preventDefault(); $("chat").classList.remove("drag"); addChatImages(e.dataTransfer.files); });
+}, {}, 'chat-in-paste');
+addSafeListener($("chat"), "dragover", e => { e.preventDefault(); $("chat").classList.add("drag"); }, {}, 'chat-dragover');
+addSafeListener($("chat"), "dragleave", e => { if (e.target === $("chat")) $("chat").classList.remove("drag"); }, {}, 'chat-dragleave');
+addSafeListener($("chat"), "drop", e => { e.preventDefault(); $("chat").classList.remove("drag"); addChatImages(e.dataTransfer.files); }, {}, 'chat-drop');
 
 /* emoji picker and the team's own sticker set */
 const EMOJI = {
@@ -1436,7 +1436,7 @@ async function sendSticker(key) {
   toggleEmoji(false);
   if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setSafeTimeout(() => renderChat(true), 0);
 }
-$("emoji-btn").addEventListener("click", () => toggleEmoji());
+addSafeListener($("emoji-btn"), "click", () => toggleEmoji(), {}, 'emoji-btn-click');
 
 /* polls on any topic: a chat message with poll {q, opts, closed}; votes in pv {userId: optionIndex} */
 S.pollDraft = null;
@@ -1449,8 +1449,8 @@ function togglePollForm(open) {
 function renderPollForm() {
   const d = S.pollDraft, pop = $("poll-pop");
   const q = h("input", { class: "field", id: "poll-q", maxlength: "200", placeholder: "Ne oylansin? Orn: Ana karakter hangi sinif olsun?" });
-  q.value = d.q; q.addEventListener("input", () => { d.q = q.value; });
-  q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); startPoll(); } });
+  q.value = d.q; addSafeListener(q, "input", () => { d.q = q.value; }, {}, 'poll-q-input');
+  addSafeListener(q, "keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); startPoll(); } }, {}, 'poll-q-keydown');
   pop.replaceChildren(h("span", { class: "label" }, "Yeni oylama · onay / ret"), q,
     h("div", { class: "actions" },
       h("button", { class: "btn primary sm", type: "button", onclick: startPoll }, "Oylamayi baslat"),
@@ -1486,17 +1486,17 @@ async function votePoll(m, i) {
   if (!S.meId || (m.poll && m.poll.closed)) return;
   await write(() => S.db.doc("chat/" + m.id).update({ pv: { [S.meId]: i } }));
 }
-$("poll-btn").addEventListener("click", () => { toggleEmoji(false); togglePollForm(); });
+addSafeListener($("poll-btn"), "click", () => { toggleEmoji(false); togglePollForm(); }, {}, 'poll-btn-click');
 /* composedPath keeps the click's ancestors even when a re-render has already removed the clicked button */
 const clickedIn = (e, ...ids) => e.composedPath().some(el => el && ids.includes(el.id));
-document.addEventListener("click", e => { if (!clickedIn(e, "poll-pop", "poll-btn")) { const pp = $("poll-pop"); if (!pp.hidden) togglePollForm(false); } });
-document.addEventListener("click", e => { if (!e.composedPath().some(el => el && (el.id === "emoji-pop" || el.id === "emoji-btn"))) toggleEmoji(false); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("emoji-pop").hidden) toggleEmoji(false); });
-$("f-chat").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
-$("chat-in").addEventListener("keydown", e => {
+addSafeListener(document, "click", e => { if (!clickedIn(e, "poll-pop", "poll-btn")) { const pp = $("poll-pop"); if (!pp.hidden) togglePollForm(false); } }, {}, 'poll-close-outside');
+addSafeListener(document, "click", e => { if (!e.composedPath().some(el => el && (el.id === "emoji-pop" || el.id === "emoji-btn"))) toggleEmoji(false); }, {}, 'emoji-close-outside');
+addSafeListener(document, "keydown", e => { if (e.key === "Escape" && !$("emoji-pop").hidden) toggleEmoji(false); }, {}, 'emoji-close-escape');
+addSafeListener($("f-chat"), "submit", e => { e.preventDefault(); sendChat(); }, {}, 'f-chat-submit');
+addSafeListener($("chat-in"), "keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
-});
-document.addEventListener("visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); });
+}, {}, 'chat-in-keydown-enter');
+addSafeListener(document, "visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); }, {}, 'chat-visibilitychange');
 
 /* ---------- "Claude'a is ver": requests that Ozgur's Claude Code session picks up and does ---------- */
 S.jobs = []; S.jobsPrev = null;
@@ -1606,8 +1606,8 @@ function renderJobs() {
       cancel));
   }
 }
-$("f-ai").addEventListener("submit", e => { e.preventDefault(); addJob(); });
-$("ai-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
+addSafeListener($("f-ai"), "submit", e => { e.preventDefault(); addJob(); });
+addSafeListener($("ai-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
 setSafeInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
 
 /* ---------- game progress + release notes ---------- */
@@ -1683,7 +1683,7 @@ function renderBuilds() {
         h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.buildDel = null; renderBuilds(); } }, "Vazgec")) : null));
   });
 }
-$("f-build").addEventListener("submit", async e => {
+addSafeListener($("f-build"), "submit", async e => {
   e.preventDefault();
   if (!S.meId || S.buildUploading) return;
   const err = $("bd-err"); err.textContent = "";
@@ -1771,9 +1771,9 @@ function updEditForm(u) {
   const titleIn = h("input", { class: "field", id: "ue-title", value: e.title, maxlength: "120", placeholder: "Baslik", "aria-label": "Baslik" });
   const bodyIn = h("textarea", { class: "field", id: "ue-body", rows: "5", placeholder: "Ne degisti?", "aria-label": "Aciklama" });
   bodyIn.value = e.body;
-  verIn.addEventListener("input", () => { e.ver = verIn.value; });
-  titleIn.addEventListener("input", () => { e.title = titleIn.value; });
-  bodyIn.addEventListener("input", () => { e.body = bodyIn.value; });
+  addSafeListener(verIn, "input", () => { e.ver = verIn.value; }, {}, 'upd-edit-ver-input');
+  addSafeListener(titleIn, "input", () => { e.title = titleIn.value; }, {}, 'upd-edit-title-input');
+  addSafeListener(bodyIn, "input", () => { e.body = bodyIn.value; }, {}, 'upd-edit-body-input');
   const err = h("p", { class: "err" });
   const save = async () => {
     const title = e.title.trim(); if (!title) { err.textContent = "Baslik bos olamaz."; return; }
@@ -1792,9 +1792,9 @@ function updEditForm(u) {
 async function saveProgress(patch) {
   if (await write(() => S.db.doc("team/settings").update({ progress: Object.assign({ at: Date.now(), by: S.meId }, patch) }))) toast("Oyunun durumu guncellendi");
 }
-$("upd-pct").addEventListener("input", e => { $("upd-pctv").textContent = "%" + e.target.value; $("upd-bar").style.width = e.target.value + "%"; });
-$("upd-pct").addEventListener("change", e => saveProgress({ pct: Number(e.target.value) }));
-$("upd-phase").addEventListener("change", e => {
+addSafeListener($("upd-pct"), "input", e => { $("upd-pctv").textContent = "%" + e.target.value; $("upd-bar").style.width = e.target.value + "%"; }, {}, 'upd-pct-input');
+addSafeListener($("upd-pct"), "change", e => saveProgress({ pct: Number(e.target.value) }), {}, 'upd-pct-change');
+addSafeListener($("upd-phase"), "change", e => {
   const p = (S.settings && S.settings.progress) || {};
   const cur = PHASES[p.phase] ? p.phase : "fikir", pct = Number(p.pct) || 0;
   const from = PHASE_ORDER.indexOf(cur), to = PHASE_ORDER.indexOf(e.target.value);
@@ -1802,7 +1802,7 @@ $("upd-phase").addEventListener("change", e => {
   if (to === from + 1 && pct < 100) { e.target.value = cur; toast("Bu asama henuz %" + pct + ". Once %100 tamamla, sonra sonraki asamaya gecebilirsin."); return; }
   saveProgress(to === from + 1 ? { phase: e.target.value, pct: 0 } : { phase: e.target.value });
 });
-$("f-upd").addEventListener("submit", async e => {
+addSafeListener($("f-upd"), "submit", async e => {
   e.preventDefault();
   const title = $("upd-title").value.trim(); if (!title || !S.meId) return;
   const p = (S.settings && S.settings.progress) || {};
@@ -1823,43 +1823,43 @@ function updateInviteCode() {
   }
 }
 
-$("btn-settings").addEventListener("click", () => {
+addSafeListener($("btn-settings"), "click", () => {
   const pop = $("pop-settings"); pop.hidden = !pop.hidden;
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) {
     // Populate project URL in invite link field
     updateInviteCode();
   }
-});
-document.addEventListener("click", e => {
+}, {}, 'btn-settings-click');
+addSafeListener(document, "click", e => {
   if (!e.target.closest(".menu")) { $("pop-settings").hidden = true; $("btn-settings").setAttribute("aria-expanded", "false"); }
-});
-$("f-game").addEventListener("submit", async e => {
+}, {}, 'settings-close-outside');
+addSafeListener($("f-game"), "submit", async e => {
   e.preventDefault();
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adi kaydedildi");
-});
+}, {}, 'f-game-submit');
 
 /* invite code copy button - copy just the invite code */
-$("btn-copy-invite").addEventListener("click", () => {
+addSafeListener($("btn-copy-invite"), "click", () => {
   if (!S.settings || !S.settings.inviteToken) {
     toast("Henüz davet kodu yok");
     return;
   }
   navigator.clipboard.writeText(S.settings.inviteToken).then(() => toast("Davet kodu kopyalandi")).catch(() => toast("Kopyalanamadi"));
-});
+}, {}, 'btn-copy-invite-click');
 
 /* generate new invite link button */
-$("btn-generate-invite").addEventListener("click", async () => {
+addSafeListener($("btn-generate-invite"), "click", async () => {
   if (!S.settings || !S.meId) return;
   const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   if (await write(() => S.db.doc("team/settings").update({ inviteToken: newToken }))) {
     updateInviteCode();
     toast("Yeni davet kodu olusturuldu");
   }
-});
+}, {}, 'btn-generate-invite-click');
 
 /* apply invite code from input */
-$("btn-apply-invite").addEventListener("click", () => {
+addSafeListener($("btn-apply-invite"), "click", () => {
   const input = $("invite-code-input");
   if (!input) return;
   const code = input.value.trim();
@@ -1870,25 +1870,26 @@ $("btn-apply-invite").addEventListener("click", () => {
   // Navigate to URL with invite parameter
   const link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
   window.location.href = link;
-});
+}, {}, 'btn-apply-invite-click');
 
-$("btn-logout").addEventListener("click", () => {
+addSafeListener($("btn-logout"), "click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
   S.username = null;
   S.canWrite = false;
   S.welcomeShown = false;
   route();
-});
+}, {}, 'btn-logout-click');
 
-$("btn-publish").addEventListener("click", () => {
+addSafeListener($("btn-publish"), "click", () => {
   alert("Yerel build'i guncellemek icin:\n1. 'dist/index.html' dosyasini olustur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
-});
+}, {}, 'btn-publish-click');
+
 // Kullanici Listesi butonu - event delegation ile (buton DOM'da olmasa bile calisir)
 // Bu sayede buton DOM'a eklendiginde (giris yapildiginda panel gorundugunde) otomatik calisir
-document.addEventListener("click", e => {
+addSafeListener(document, "click", e => {
   if (e.target.closest("#btn-user-list")) showUserListModal();
-});
+}, {}, 'btn-user-list-delegate');
 
 function showUserListModal() {
   // Mevcut kullanicilari topla
@@ -1944,29 +1945,29 @@ function showUserListModal() {
   document.body.appendChild(modal);
 
   // Kapatma olaylari
-  modal.querySelector(".modal-close").addEventListener("click", () => modal.remove());
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+  addSafeListener(modal.querySelector(".modal-close"), "click", () => modal.remove(), {}, 'modal-close-btn');
+  addSafeListener(modal, "click", (e) => { if (e.target === modal) modal.remove(); }, {}, 'modal-close-overlay');
 
   // Cikarma butonlari
   modal.querySelectorAll(".user-remove").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
+    addSafeListener(btn, "click", async (e) => {
       const userId = e.target.dataset.id;
       if (confirm("Bu kullaniciyi cikarmak istediginizden emin misiniz?")) {
         await removeUser(userId);
         modal.remove();
         showUserListModal(); // Listeyi yenile
       }
-    });
+    }, {}, 'user-remove-' + btn.dataset.id);
   });
 
   // ESC tusu ile kapatma
   const handleEsc = (e) => {
     if (e.key === "Escape") {
       modal.remove();
-      document.removeEventListener("keydown", handleEsc);
+      clearListeners('user-list-esc');
     }
   };
-  document.addEventListener("keydown", handleEsc);
+  addSafeListener(document, "keydown", handleEsc, {}, 'user-list-esc');
 }
 
 async function removeUser(userId) {
@@ -2061,14 +2062,14 @@ async function addNewImages(files) {
   const got = await uploadMedia(files, $("nw-err"));
   S.uploading -= files.length; S.newImages.push(...got.images); S.newVideos.push(...got.videos); renderNewThumbs();
 }
-$("nw-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addNewImages(fs); });
-$("f-new").addEventListener("paste", e => {
+addSafeListener($("nw-file"), "change", e => { const fs = [...e.target.files]; e.target.value = ""; addNewImages(fs); }, {}, 'nw-file-change');
+addSafeListener($("f-new"), "paste", e => {
   const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
   if (fs.length) { e.preventDefault(); addNewImages(fs); }
-});
-$("f-new").addEventListener("dragover", e => { e.preventDefault(); $("f-new").classList.add("drag"); });
-$("f-new").addEventListener("dragleave", () => $("f-new").classList.remove("drag"));
-$("f-new").addEventListener("drop", e => { e.preventDefault(); $("f-new").classList.remove("drag"); addNewImages(e.dataTransfer.files); });
+}, {}, 'f-new-paste');
+addSafeListener($("f-new"), "dragover", e => { e.preventDefault(); $("f-new").classList.add("drag"); }, {}, 'f-new-dragover');
+addSafeListener($("f-new"), "dragleave", () => $("f-new").classList.remove("drag"), {}, 'f-new-dragleave');
+addSafeListener($("f-new"), "drop", e => { e.preventDefault(); $("f-new").classList.remove("drag"); addNewImages(e.dataTransfer.files); }, {}, 'f-new-drop');
 
 /* ---------- new note ---------- */
 function renderNewKinds() {
@@ -2078,7 +2079,7 @@ function renderNewKinds() {
     onclick: () => { S.newKind = k; renderNewKinds(); }
   }, h("span", { class: "dot", style: `background:var(--k-${k})` }), n));
 }
-$("f-new").addEventListener("submit", async e => {
+addSafeListener($("f-new"), "submit", async e => {
   e.preventDefault();
   const title = $("nw-title").value.trim(); if (!title) return;
   const now = Date.now(), btn = $("nw-submit");
@@ -2105,13 +2106,13 @@ function setView(v) {
   renderFilters(); renderCards();
   if (chat) { renderChat(true); markChatSeen(); setSafeTimeout(() => $("chat-in").focus(), 0); }
 }
-$("tab-active").addEventListener("click", () => setView("active"));
-$("tab-star").addEventListener("click", () => setView("star"));
-$("tab-done").addEventListener("click", () => setView("done"));
-$("tab-chat").addEventListener("click", () => setView("chat"));
-$("tab-ai").addEventListener("click", () => setView("ai"));
-$("tab-upd").addEventListener("click", () => setView("upd"));
-$("q").addEventListener("input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); });
+addSafeListener($("tab-active"), "click", () => setView("active"), {}, 'tab-active-click');
+addSafeListener($("tab-star"), "click", () => setView("star"), {}, 'tab-star-click');
+addSafeListener($("tab-done"), "click", () => setView("done"), {}, 'tab-done-click');
+addSafeListener($("tab-chat"), "click", () => setView("chat"), {}, 'tab-chat-click');
+addSafeListener($("tab-ai"), "click", () => setView("ai"), {}, 'tab-ai-click');
+addSafeListener($("tab-upd"), "click", () => setView("upd"), {}, 'tab-upd-click');
+addSafeListener($("q"), "input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); }, {}, 'q-input');
 function seg(boxId, opts, key) {
   const box = $(boxId); box.replaceChildren();
   for (const [v, n] of opts) box.append(h("button", {
@@ -2159,39 +2160,49 @@ function isFresh0(n) {
   return (n.replies || []).some(r => r.at > S.prevSeen && r.a !== S.meId);
 }
 async function render() {
-  const ids = new Set();
-  for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
-  if (S.meId) ids.add(S.meId);
-  for (const m of S.chat || []) ids.add(m.a);
-  for (const j of S.jobs || []) ids.add(j.a);
-  for (const u of S.updates || []) ids.add(u.a);
-  if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
-  if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
-  ids.delete(undefined); ids.delete(null);
-  if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
-  computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  try {
+    const ids = new Set();
+    for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
+    if (S.meId) ids.add(S.meId);
+    for (const m of S.chat || []) ids.add(m.a);
+    for (const j of S.jobs || []) ids.add(j.a);
+    for (const u of S.updates || []) ids.add(u.a);
+    if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
+    if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
+    ids.delete(undefined); ids.delete(null);
+    if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
+    computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  } catch (e) {
+    error("Render error:", e);
+  }
 }
 /* online status: everyone with the page open is in the room; closing the tab leaves it */
 const PRES = { on: "cevrimici", away: "arka planda", off: "cevrimdisi" };
 S.online = {};
 async function startPresence() {
-  const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
-  if (!room) return voiceFallback();
-  S.room = room;
-  const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
-  push();
-  document.addEventListener("visibilitychange", push);
-  window.addEventListener("pagehide", () => markLastSeen(S.meId));
-  /* typing indicator: presence.typing is true while I type, cleared 3 s after the last key or on send */
-  let typingTimer = null, typingOn = false;
-  const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
-  $("chat-in").addEventListener("input", () => {
+  try {
+    const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
+    if (!room) return voiceFallback();
+    S.room = room;
+    const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
+    push();
+    addSafeListener(document, "visibilitychange", push, {}, 'presence-visibilitychange');
+    addSafeListener(window, "pagehide", () => markLastSeen(S.meId), {}, 'presence-pagehide');
+    /* typing indicator: presence.typing is true while I type, cleared 3 s after the last key or on send */
+    let typingTimer = null, typingOn = false;
+    const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
+    addSafeListener($("chat-in"), "input", () => {
+  } catch (e) {
+    error("startPresence error:", e);
+    voiceFallback();
+  }
+}
     setTyping(!!$("chat-in").value.trim());
     clearSafeTimeout(typingTimer); typingTimer = setSafeTimeout(() => setTyping(false), 3000);
-  });
-  $("f-chat").addEventListener("submit", () => { clearSafeTimeout(typingTimer); setTyping(false); });
-  $("chat-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } });
-  $("chat-in").addEventListener("blur", () => { clearSafeTimeout(typingTimer); setTyping(false); });
+  }, {}, 'chat-typing-input');
+  addSafeListener($("f-chat"), "submit", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-submit');
+  addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } }, {}, 'chat-typing-keydown');
+  addSafeListener($("chat-in"), "blur", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-blur');
   room.onPeers(ch => {
     const typing = new Set();
     for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
@@ -2219,7 +2230,7 @@ function openVoicePage() {
 function voiceFallback() {
   $("vcall").hidden = false;
   $("vc-join").textContent = "📞 Sesli sohbet baslat";
-  $("vc-join").addEventListener("click", openVoicePage);
+  addSafeListener($("vc-join"), "click", openVoicePage, {}, 'vc-join-fallback');
 }
 function startVoiceCall(room) {
   if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return voiceFallback();
@@ -2310,7 +2321,7 @@ function startVoiceCall(room) {
     room.presence({ voice: null, vm: null }).catch(() => {});
     sync();
   };
-  $("vc-join").addEventListener("click", async () => {
+  addSafeListener($("vc-join"), "click", async () => {
     if (V.stream) return leave();
     try {
       V.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
@@ -2321,15 +2332,15 @@ function startVoiceCall(room) {
     room.presence({ voice: true, vm: false }).catch(() => {});
     sync();
     toast("Sesli sohbete katildin");
-  });
-  $("vc-mute").addEventListener("click", () => {
+  }, {}, 'vc-join-click');
+  addSafeListener($("vc-mute"), "click", () => {
     if (!V.stream) return;
     V.muted = !V.muted;
     V.stream.getAudioTracks().forEach(t => (t.enabled = !V.muted));
     room.presence({ vm: V.muted }).catch(() => {});
     sync();
-  });
-  window.addEventListener("pagehide", leave);
+  }, {}, 'vc-mute-click');
+  addSafeListener(window, "pagehide", leave, {}, 'voice-pagehide');
 }
 /* last time someone was online: written when their tab hides or closes, and by whoever sees them leave */
 S.lastSeenOnline = {};
@@ -2643,11 +2654,11 @@ function renderEvents() {
 
 /* ---------- detail sheet ---------- */
 function closeSheet() { S.openId = null; S.rEdit = null; S.rDel = null; $("sheet-root").replaceChildren(); }
-document.addEventListener("keydown", e => {
+addSafeListener(document, "keydown", e => {
   if (e.key !== "Escape") return;
   const lb = document.querySelector(".lightbox");
   if (lb) lb.remove(); else if (S.openId) closeSheet();
-});
+}, {}, 'global-escape');
 
 function openSheet(id) {
   const n = S.notes.find(x => x.id === id); if (!n) return;
@@ -2704,9 +2715,9 @@ function openSheet(id) {
     const replies = (cur.replies || []).concat([{ a: S.meId, t, at }]);
     if (await write(() => ref.update({ replies, updatedAt: at, updatedBy: S.meId }), saveErr)) replyIn.value = "";
   };
-  replyIn.addEventListener("keydown", e => {
+  addSafeListener(replyIn, "keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendReply(); }
-  });
+  }, {}, 'sh-reply-keydown');
   const addImgs = async e => {
     const files = [...e.target.files]; e.target.value = "";
     const got = await uploadMedia(files, saveErr); if (!got.images.length && !got.videos.length) return;
@@ -2774,13 +2785,13 @@ function renderSheetLive() {
   const media = (n.images || []).map(x => ["images", x]).concat((n.videos || []).map(x => ["videos", x]));
   for (const [field, mid] of media) {
     const rm = S.canWrite && n.author === S.meId && h("button", { class: "btn ghost sm", type: "button" }, "Kaldir");
-    if (rm) rm.addEventListener("click", async () => {
+    if (rm) addSafeListener(rm, "click", async () => {
       if (rm.dataset.sure !== "1") { rm.dataset.sure = "1"; rm.textContent = "Emin misin? Tekrar tikla"; return; }
       const cur = S.notes.find(x => x.id === n.id); if (!cur) return;
       const at = Date.now();
       if (await write(() => S.db.doc("notes/" + n.id).update({ [field]: (cur[field] || []).filter(x => x !== mid), updatedAt: at, updatedBy: S.meId })))
         if (S.assets) S.assets.delete(mid).catch(() => {});
-    });
+    }, {}, 'gallery-rm-' + field + '-' + mid);
     const el = field === "images"
       ? h("img", { src: imgUrl(mid), alt: "", loading: "lazy", onclick: () => lightbox(mid) })
       : h("video", { src: imgUrl(mid), controls: true, preload: "metadata", playsinline: true });
@@ -2808,8 +2819,8 @@ function replyBody(n, r) {
   if (mine && S.rEdit && S.rEdit.key === k && S.rEdit.noteId === n.id) {
     const ta = h("textarea", { class: "field", id: "sh-redit", rows: "2", style: "min-height:60px", "aria-label": "Yaniti duzenle" });
     ta.value = S.rEdit.t;
-    ta.addEventListener("input", () => { if (S.rEdit) S.rEdit.t = ta.value; });
-    ta.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); S.rEdit = null; renderSheetLive(); } });
+    addSafeListener(ta, "input", () => { if (S.rEdit) S.rEdit.t = ta.value; }, {}, 'redit-input-' + k);
+    addSafeListener(ta, "keydown", e => { if (e.key === "Escape") { e.stopPropagation(); S.rEdit = null; renderSheetLive(); } }, {}, 'redit-keydown-' + k);
     return h("div", {}, ta, h("div", { class: "actions", style: "margin-top:6px" },
       h("button", { class: "btn primary sm", type: "button", onclick: () => saveReplyEdit(n.id, k) }, "Kaydet"),
       h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.rEdit = null; renderSheetLive(); } }, "Vazgec")));

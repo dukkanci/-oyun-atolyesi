@@ -6,12 +6,15 @@
 (function() {
   'use strict';
 
+  // Development mode check
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
   // Gerçek claude.ai ortamı var mı kontrol et
   const hasRealClaude = window.claude && typeof window.claude.use === 'function';
 
   // Gerçek ortam varsa mock'u devre dışı bırak
   if (hasRealClaude) {
-    console.log('%c[Oyun Atölyesi] Gerçek claude.ai ortamı tespit edildi - Mock devre dışı', 'color: #2196F3; font-weight: bold');
+    if (isDev) console.log('%c[Oyun Atölyesi] Gerçek claude.ai ortamı tespit edildi - Mock devre dışı', 'color: #2196F3; font-weight: bold');
     // window.claude zaten gerçek API'yi sağlıyor, mock'a gerek yok
   } else {
     // Mock'u başlat
@@ -345,9 +348,9 @@
     window.imgUrl = (id) => mockAssets.getUrl(id);
 
     // --- Development mode indicator ---
-    console.log('%c[Oyun Atölyesi] Bağımsız mod aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
-    console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
-    console.log('Verileri temizlemek için: localStorage.clear()');
+    if (isDev) console.log('%c[Oyun Atölyesi] Bağımsız mod aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
+    if (isDev) console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
+    if (isDev) console.log('Verileri temizlemek için: localStorage.clear()');
   }
 
   // Mock'u başlat (gerçek ortam yoksa)

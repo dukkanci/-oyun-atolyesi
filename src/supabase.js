@@ -5,6 +5,9 @@
 (function() {
   'use strict';
 
+  // Development mode check
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
   // Helper functions
   function uuid() {
     return crypto.randomUUID();
@@ -62,7 +65,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error('localStorage yazma hatası:', e);
+      if (isDev) console.error('localStorage yazma hatası:', e);
     }
   }
 
@@ -81,7 +84,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error('localStorage yazma hatası:', e);
+      if (isDev) console.error('localStorage yazma hatası:', e);
     }
   }
 
@@ -307,5 +310,5 @@
   };
 
   // No auto-initialization, no CDN loading
-  console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
+  if (isDev) console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
 })();

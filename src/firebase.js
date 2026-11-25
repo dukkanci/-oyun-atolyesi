@@ -5,6 +5,9 @@
 (function() {
   'use strict';
 
+  // Development mode check
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
   // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyDl81LxJiVFUlgOH-qqb7FFW7oZRCXVe_4",
@@ -320,7 +323,7 @@
     window.imgUrl = async (id) => mockAssets.getUrl(id);
 
     // Debug
-    console.log('%c[Oyun Atölyesi] Firebase mod aktif (paylaşımlı)', 'color: #2196F3; font-weight: bold');
+    if (isDev) console.log('%c[Oyun Atölyesi] Firebase mod aktif (paylaşımlı)', 'color: #2196F3; font-weight: bold');
   }
 
   // Firebase SDK'sını CDN'den yükle
@@ -351,9 +354,9 @@
   // Başlat
   if (typeof window !== 'undefined') {
     loadFirebaseSDK().then(initFirebase).catch(e => {
-      console.error('Firebase yükleme hatası:', e);
+      if (isDev) console.error('Firebase yükleme hatası:', e);
       // Fallback: mock.js'i yüklemeye çalış
-      console.log('Mock moduna düşülüyor...');
+      if (isDev) console.log('Mock moduna düşülüyor...');
     });
   }
 })();

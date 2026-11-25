@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><base href="/-oyun-atolyesi/efsane-proje/"><meta name="build-version" content="2024-11-26-v6"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#33265a"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><base href="/-oyun-atolyesi/efsane-proje/"><meta name="build-version" content="2024-11-26-v6"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#33265a"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2333265a'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>✦</text></svg>" type="image/svg+xml"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Oyun Atölyesi</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -694,6 +694,175 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } }
 .offline-banner .btn { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3); color: white; }
 .offline-banner .btn:hover { background: rgba(255,255,255,.3); }
+
+/* Lobby styles */
+.lobby-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.lobby-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.lobby-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lobby-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.lobby-section h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: var(--ink);
+}
+.workshop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.workshop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.workshop-item:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.workshop-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workshop-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+}
+.workshop-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.workshop-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+.lobby-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.lobby-actions .btn {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.modal {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close:hover {
+  color: var(--ink);
+}
+.modal form {
+  display: grid;
+  gap: 12px;
+}
+.modal .field {
+  width: 100%;
+}
+.modal .actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.modal .btn {
+  min-width: 100px;
+}
+
+/* Welcome screen styles */
+.welcome-card {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+.welcome-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+.welcome-header h1 span {
+  color: var(--accent);
+}
+.welcome-desc {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.welcome-card .btn {
+  width: 100%;
+  max-width: 300px;
+  margin: 8px auto;
+}
 </style>
 <!-- loading -->
 <section id="s-loading" class="gate">
@@ -717,11 +886,21 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     <form id="f-login">
       <label class="label" for="lg-username">Kullanıcı adı</label>
       <input class="field" id="lg-username" required maxlength="30" placeholder="ör. oyuncu1" autocomplete="username">
-      <label class="label" for="lg-game">Oyun adı (ilk girişte)</label>
-      <input class="field" id="lg-game" maxlength="60" placeholder="ör. Proje Fener">
       <p class="err" id="lg-err"></p>
-      <button class="btn primary" type="submit">Atölyeye gir</button>
+      <button class="btn primary" type="submit">Giriş Yap</button>
     </form>
+  </div>
+</section>
+
+<!-- welcome screen after login - shows "Lobi Listele" button -->
+<section id="s-welcome" class="gate" hidden>
+  <div class="gate-card welcome-card">
+    <div class="welcome-header">
+      <h1>Hoş Geldiniz, <span id="welcome-username"></span>!</h1>
+    </div>
+    <p class="welcome-desc">Atölyelerinizi görmek ve yönetmek için lobiyi açın.</p>
+    <button class="btn primary" id="btn-open-lobby" type="button">Lobi Listele</button>
+    <button class="btn ghost" id="btn-logout-welcome" type="button">Çıkış Yap</button>
   </div>
 </section>
 
@@ -730,6 +909,65 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   <div class="gate-card">
     <h1>Atölye henüz kurulmadı</h1>
     <p>Sayfanın sahibi önce oyun adını belirlemeli. Kurulum bitince bu ekran kendiliğinden giriş ekranına döner.</p>
+  </div>
+</section>
+
+<!-- lobby - atölye listesi ve yönetimi -->
+<section id="s-lobby" class="gate" hidden>
+  <div class="gate-card lobby-card">
+    <div class="lobby-header">
+      <h1>Oyun Atölyesi</h1>
+      <div class="lobby-user">
+        <span id="lobby-username"></span>
+        <button class="btn ghost" id="btn-logout-lobby" type="button">Çıkış</button>
+      </div>
+    </div>
+    <div class="lobby-content">
+      <div class="lobby-section">
+        <h2>Atölyelerim</h2>
+        <div id="lobby-workshops" class="workshop-list">
+          <div class="empty">Henüz atölyeniz yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>
+        </div>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn primary" id="btn-create-workshop" type="button">Yeni Atölye Oluştur</button>
+        <button class="btn" id="btn-join-workshop" type="button">Davet Kodu ile Katıl</button>
+      </div>
+    </div>
+
+    <!-- Create workshop modal -->
+    <div id="create-workshop-modal" class="modal-overlay" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Yeni Atölye Oluştur</h3>
+          <button class="modal-close" aria-label="Kapat">×</button>
+        </div>
+        <form id="f-create-workshop" style="display:grid;gap:8px">
+          <label class="label" for="cw-game">Atölye Adı</label>
+          <input class="field" id="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
+          <p class="err" id="cw-err"></p>
+          <button class="btn primary" type="submit">Oluştur</button>
+          <button class="btn ghost" type="button" id="btn-cancel-create">İptal</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Join workshop modal -->
+    <div id="join-workshop-modal" class="modal-overlay" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Davet Kodu ile Katıl</h3>
+          <button class="modal-close" aria-label="Kapat">×</button>
+        </div>
+        <form id="f-join-workshop" style="display:grid;gap:8px">
+          <label class="label" for="jw-code">Davet Kodu</label>
+          <input class="field" id="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
+          <p class="err" id="jw-err"></p>
+          <button class="btn primary" type="submit">Katıl</button>
+          <button class="btn ghost" type="button" id="btn-cancel-join">İptal</button>
+        </form>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -757,12 +995,17 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
             <button class="btn" type="submit">Adı kaydet</button>
           </form>
           <div style="display:grid;gap:6px">
-            <span class="label">Proje linki (arkadaşına gönder)</span>
+            <span class="label">Davet kodu (arkadaşına gönder)</span>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <code id="inv-link-value" style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--f-mono);font-size:13px;word-break:break-all"></code>
               <button class="btn" type="button" id="btn-copy-invite" title="Kopyala">Kopyala</button>
+              <button class="btn" type="button" id="btn-generate-invite" title="Yeni davet kodu oluştur">Yeniden Oluştur</button>
             </div>
-            <span class="hint">Bu linki arkadaşına gönder. O giriş yapıp atölyeye girecek.</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+              <input type="text" id="invite-code-input" class="field" placeholder="Davet kodunu buraya yapıştır" style="flex:1;min-width:200px" title="Arkadaşın gönderdiği davet kodunu buraya yapıştır">
+              <button class="btn" type="button" id="btn-apply-invite" title="Davet kodunu uygula">Katıl</button>
+            </div>
+            <span class="hint">Bu kodu arkadaşına gönder. O "Katıl" butonuna basıp kodu yapıştırıp atölyeye girecek. Veya arkadaşın gönderdiği davet kodunu yukarıya yapıştırıp "Katıl" butonuna bas.</span>
           </div>
           <div style="display:grid;gap:6px">
             <span class="label">Profil fotoğrafın</span>
@@ -939,12 +1182,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 (function() {
   'use strict';
 
+  // Development mode check
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
   // Gerçek claude.ai ortamı var mı kontrol et
   const hasRealClaude = window.claude && typeof window.claude.use === 'function';
 
   // Gerçek ortam varsa mock'u devre dışı bırak
   if (hasRealClaude) {
-    console.log('%c[Oyun Atölyesi] Gerçek claude.ai ortamı tespit edildi - Mock devre dışı', 'color: #2196F3; font-weight: bold');
+    if (isDev) console.log('%c[Oyun Atölyesi] Gerçek claude.ai ortamı tespit edildi - Mock devre dışı', 'color: #2196F3; font-weight: bold');
     // window.claude zaten gerçek API'yi sağlıyor, mock'a gerek yok
   } else {
     // Mock'u başlat
@@ -1278,9 +1524,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     window.imgUrl = (id) => mockAssets.getUrl(id);
 
     // --- Development mode indicator ---
-    console.log('%c[Oyun Atölyesi] Bağımsız mod aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
-    console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
-    console.log('Verileri temizlemek için: localStorage.clear()');
+    if (isDev) console.log('%c[Oyun Atölyesi] Bağımsız mod aktif - Mock API yüklendi (localStorage)', 'color: #4CAF50; font-weight: bold');
+    if (isDev) console.log('Kullanıcı değiştirmek için: window.claude.use("user")._setCurrentUser("user-b")');
+    if (isDev) console.log('Verileri temizlemek için: localStorage.clear()');
   }
 
   // Mock'u başlat (gerçek ortam yoksa)
@@ -1307,6 +1553,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 (function() {
   'use strict';
+
+  // Development mode check
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
   // Helper functions
   function uuid() {
@@ -1365,7 +1614,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error('localStorage yazma hatası:', e);
+      if (isDev) console.error('localStorage yazma hatası:', e);
     }
   }
 
@@ -1384,7 +1633,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error('localStorage yazma hatası:', e);
+      if (isDev) console.error('localStorage yazma hatası:', e);
     }
   }
 
@@ -1610,7 +1859,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   };
 
   // No auto-initialization, no CDN loading
-  console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
+  if (isDev) console.log('%c[Oyun Atölyesi] Yerel mod aktif (localStorage, CDN yok)', 'color: #4CAF50; font-weight: bold');
 })();</script>
 <script>
 const KINDS = [
@@ -1629,7 +1878,12 @@ const S = {
   settings: undefined, notes: [], profiles: {},
   f: { kind: "all", who: "all", status: "all", media: "all", q: "" },
   newKind: "fikir", view: "active", openId: null, notesUnsub: null, prevSeen: 0,
-  offline: false
+  offline: false,
+  // Lobby/workshop state
+  currentWorkshop: null,
+  workshops: [],
+  lobbyUnsub: null,
+  welcomeShown: false
 };
 
 const $ = id => document.getElementById(id);
@@ -1638,6 +1892,24 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
+
+// HTML escaping utility to prevent XSS
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&#039;');
+}
+
+// Safe logging - only in development
+const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+function log(...args) { if (isDev) console.log(...args); }
+function warn(...args) { if (isDev) console.warn(...args); }
+function error(...args) { if (isDev) console.error(...args); }
+
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -1653,13 +1925,86 @@ function h(tag, attrs, ...kids) {
 function kindVars(k) { return `--kc:var(--k-${k});--kb:var(--k-${k}-bg);--ko:var(--k-${k}-on)`; }
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2200);
+  clearSafeTimeout(toast.t); toast.t = setSafeTimeout(() => (t.hidden = true), 2200);
 }
+
+// Timer/Event cleanup utilities
+const timers = new Map();
+const intervals = new Map();
+const listeners = new Map();
+
+let timerIdCounter = 0;
+let intervalIdCounter = 0;
+
+function setSafeTimeout(fn, delay, id) {
+  const uid = id || 'timeout_' + (++timerIdCounter);
+  if (timers.has(uid)) clearTimeout(timers.get(uid));
+  const idNum = setTimeout(fn, delay);
+  timers.set(uid, idNum);
+  return uid;
+}
+
+function clearSafeTimeout(id) {
+  if (timers.has(id)) {
+    clearTimeout(timers.get(id));
+    timers.delete(id);
+  }
+}
+
+function setSafeInterval(fn, delay, id) {
+  const uid = id || 'interval_' + (++intervalIdCounter);
+  if (intervals.has(uid)) clearInterval(intervals.get(uid));
+  const idNum = setInterval(fn, delay);
+  intervals.set(uid, idNum);
+  return uid;
+}
+
+function clearSafeInterval(id) {
+  if (intervals.has(id)) {
+    clearInterval(intervals.get(id));
+    intervals.delete(id);
+  }
+}
+
+function addSafeListener(target, event, handler, options, id) {
+  target.addEventListener(event, handler, options);
+  if (!listeners.has(id)) listeners.set(id, []);
+  listeners.get(id).push({ target, event, handler, options });
+}
+
+function clearListeners(id) {
+  if (listeners.has(id)) {
+    for (const l of listeners.get(id)) {
+      l.target.removeEventListener(l.event, l.handler, l.options);
+    }
+    listeners.delete(id);
+  }
+}
+
+function clearAllTimers() {
+  for (const [, id] of timers) clearSafeTimeout(id);
+  timers.clear();
+  for (const [, id] of intervals) clearSafeInterval(id);
+  intervals.clear();
+}
+
+function clearAllListeners() {
+  for (const [, list] of listeners) {
+    for (const l of list) l.target.removeEventListener(l.event, l.handler, l.options);
+  }
+  listeners.clear();
+}
+
+// Cleanup on page unload
+addSafeListener(window, 'pagehide', () => {
+  clearAllTimers();
+  clearAllListeners();
+}, {}, 'global-pagehide-cleanup');
 // Persistent toast for SW update notification
 function showToast(msg, persistent) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t);
-  if (!persistent) toast.t = setTimeout(() => (t.hidden = true), 2200);
+  clearSafeTimeout(toast.t);
+  if (!persistent) toast.t = setSafeTimeout(() => (t.hidden = true), 2200);
 }
 // Update offline banner in header
 function updateOfflineBanner() {
@@ -1753,7 +2098,7 @@ function rotPick(id) {
   return AVATARS[keys[(rotSlot() * 3 + i * 5 + Math.floor(i / 2)) % n]];
 }
 let lastSlot = rotSlot();
-setInterval(() => { if (rotSlot() !== lastSlot) { lastSlot = rotSlot(); if (S.settings) render(); } }, 60000);
+setSafeInterval(() => { if (rotSlot() !== lastSlot) { lastSlot = rotSlot(); if (S.settings) render(); } }, 60000);
 function avatar(id, cls) {
   const p = S.profiles[id], style = "box-shadow:0 0 0 2px " + ucol(id);
   const raw = S.settings && S.settings.avatars && S.settings.avatars[id];
@@ -1772,7 +2117,10 @@ function renderAvList() {
       h(
         "button",
         { type: "button", class: "chip avpick", "aria-pressed": String(cur === entry[0]),
-          onclick: () => {}
+          onclick: async () => {
+            if (await write(() => S.db.doc("team/settings").update({ avatars: { [S.meId]: entry[0] } })))
+              toast("Profil fotografi guncellendi");
+          }
         },
       entry[1].src ? h("img", { src: entry[1].src, alt: "" }) : null,
       entry[1].label
@@ -1781,7 +2129,7 @@ function renderAvList() {
   }
   if (S.assets && S.meId) {
     const inp = h("input", { type: "file", id: "av-file", accept: IMG_TYPES.join(","), hidden: true });
-    inp.addEventListener("change", async () => {
+    addSafeListener(inp, "change", async () => {
       const f = inp.files[0]; inp.value = "";
       if (!f) return;
       const got = await uploadMedia([f], { set textContent(v) { if (v) toast(v); } });
@@ -1798,7 +2146,7 @@ function showNoWrite() {
   const b = $("nowrite"); if (b) b.hidden = false;
 }
 function show(id) {
-  for (const s of ["s-loading", "s-noaccess", "s-login", "s-wait", "s-app"]) $(s).hidden = s !== id;
+  for (const s of ["s-loading", "s-noaccess", "s-login", "s-wait", "s-app", "s-welcome", "s-lobby"]) $(s).hidden = s !== id;
 }
 async function write(fn, errEl) {
   try { await fn(); if (errEl) errEl.textContent = ""; return true; }
@@ -1830,25 +2178,26 @@ async function boot() {
       const isPreview = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       const swPath = isPreview ? '/sw.js' : '/-oyun-atolyesi/efsane-proje/sw.js';
       const reg = await navigator.serviceWorker.register(swPath);
-      console.log('SW registered:', reg.scope);
+      log('SW registered:', reg.scope);
       // Listen for SW updates
-      reg.addEventListener('updatefound', () => {
+      // Listen for SW updates
+      addSafeListener(reg, 'updatefound', () => {
         const newWorker = reg.installing;
         if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
+          addSafeListener(newWorker, 'statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               showToast('Yeni sürüm hazır. Sayfayı yenileyin.', true);
             }
-          });
+          }, {}, 'sw-statechange');
         }
       });
     } catch (e) {
-      console.warn('SW registration failed:', e);
+      warn('SW registration failed:', e);
     }
 
     // Listen for online/offline events
-    window.addEventListener('online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); });
-    window.addEventListener('offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); });
+    addSafeListener(window, 'online', () => { S.offline = false; updateOfflineBanner(); toast('Çevrimiçi - veriler senkronize ediliyor'); }, {}, 'online-listener');
+    addSafeListener(window, 'offline', () => { S.offline = true; updateOfflineBanner(); toast('Çevrimdışı mod - değişiklikler lokal saklanıyor'); }, {}, 'offline-listener');
   }
 
   // Check for stored username
@@ -1858,7 +2207,7 @@ async function boot() {
     const generatedMeId = generateUserId(storedUsername);
     const storedMeId = ls.get("atolye-meid");
     if (storedMeId && storedMeId !== generateUserId(storedUsername)) {
-      console.warn("MeId uyusmazligi, yeniden hesaplaniyor:", storedMeId, "->", generateUserId(storedUsername));
+      warn("MeId uyusmazligi, yeniden hesaplaniyor:", storedMeId, "->", generateUserId(storedUsername));
     }
     S.meId = generateUserId(storedUsername);
     S.username = storedUsername;
@@ -1873,20 +2222,20 @@ async function boot() {
 
   S.prevSeen = Number(ls.get(LS_SEEN)) || 0;
   const markSeen = () => ls.set(LS_SEEN, String(Date.now()));
-  document.addEventListener("visibilitychange", () => { if (document.hidden) markSeen(); });
-  window.addEventListener("pagehide", markSeen);
+  addSafeListener(document, "visibilitychange", () => { if (document.hidden) markSeen(); }, {}, 'visibility-mark-seen');
+  addSafeListener(window, "pagehide", markSeen, {}, 'pagehide-mark-seen');
 
   // Oturum dogrulama: localStorage'da kullanici varsa meId'yi dogrula
   if (S.meId) {
     try {
       const me = await user?.me();
       if (me && me.id && me.id !== S.meId) {
-        console.warn("MeId uyusmazligi, localStorage guncelleniyor:", S.meId, "->", me.id);
+        warn("MeId uyusmazligi, localStorage guncelleniyor:", S.meId, "->", me.id);
         ls.set("atolye-meid", me.id);
         S.meId = me.id;
       }
     } catch (e) {
-      console.warn("Oturum dogrulama hatasi:", e);
+      warn("Oturum dogrulama hatasi:", e);
     }
   }
 
@@ -1905,24 +2254,32 @@ async function boot() {
     try {
       S.settings = JSON.parse(storedSettings);
     } catch (e) {
-      console.warn('Settings parse hatasi:', e);
+      warn('Settings parse hatasi:', e);
       S.settings = null;
     }
   } else {
     S.settings = null;
   }
 
+  // Check for invitation token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const inviteToken = urlParams.get('invite');
+  if (inviteToken) {
+    // Store the invite token in localStorage for later use when user logs in
+    ls.set('atolye-invite', inviteToken);
+    // Clean up URL to remove the invite parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   // Listen to settings changes
+  // onSnapshot fires immediately with current document, so no initial route() call needed
   db.doc("team/settings").onSnapshot(snap => {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
     route();
   }, () => show("s-noaccess"));
 
-  // Initial route call so app doesn't stay on loading forever if listener is slow/fails
-  route();
-
   // Fix: gizli dosya input'una name attribute ekle (form validation hatasi onlemi)
-  setTimeout(() => {
+  setSafeTimeout(() => {
     const fileInput = document.getElementById("nw-file");
     if (fileInput && !fileInput.name) {
       fileInput.name = "nw-file";
@@ -1940,43 +2297,195 @@ function generateUserId(username) {
   return "user_" + Math.abs(hash).toString(36);
 }
 
+/* ---------- Lobby/Workshop Management ---------- */
+const WORKSHOPS_KEY = "atolye-workshops";
+
+function loadUserWorkshops() {
+  try {
+    const stored = ls.get(WORKSHOPS_KEY);
+    S.workshops = stored ? JSON.parse(stored) : [];
+    log("🔍 Loaded user workshops:", S.workshops);
+  } catch (e) {
+    warn("Workshops load error:", e);
+    S.workshops = [];
+  }
+}
+
+function saveUserWorkshops() {
+  try {
+    ls.set(WORKSHOPS_KEY, JSON.stringify(S.workshops));
+  } catch (e) {
+    warn("Workshops save error:", e);
+  }
+}
+
+function addWorkshopToUser(workshop) {
+  const exists = S.workshops.some(w => w.id === workshop.id);
+  if (!exists) {
+    S.workshops.push(workshop);
+    saveUserWorkshops();
+  }
+}
+
+function removeWorkshopFromUser(workshopId) {
+  S.workshops = S.workshops.filter(w => w.id !== workshopId);
+  saveUserWorkshops();
+}
+
+function getWorkshopSettings(workshopId) {
+  // In a multi-workshop architecture, settings would be stored per workshop
+  // For now, we use the same team/settings but with workshop-specific data
+  return S.settings;
+}
+
+async function createWorkshop(gameName) {
+  const meId = S.meId;
+  if (!meId) return null;
+
+  const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const workshopId = "ws_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8);
+  const now = Date.now();
+
+  const workshopData = {
+    id: workshopId,
+    game: gameName || "Oyun Atölyesi",
+    inviteToken,
+    createdBy: meId,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  // Save workshop settings (in a real multi-workshop setup, this would be a separate document)
+  // For now, we store workshop info in user's localStorage
+  addWorkshopToUser({ id: workshopId, game: workshopData.game, inviteToken: workshopData.inviteToken, createdAt: now });
+
+  // Create settings for this workshop (using a workshop-specific key)
+  const settingsKey = `workshop_${workshopId}_settings`;
+  const newSettings = {
+    game: workshopData.game,
+    createdBy: meId,
+    createdAt: now,
+    inviteToken: workshopData.inviteToken,
+    workshopId: workshopId
+  };
+  ls.set(`supabase_doc_${settingsKey}`, JSON.stringify(newSettings));
+
+  // Initialize workshop-specific collections
+  // In a real implementation, these would be separate Firestore collections
+  // For now, we use prefixed keys in localStorage
+
+  return workshopData;
+}
+
+function switchWorkshop(workshopId) {
+  S.currentWorkshop = workshopId;
+  // Load workshop-specific settings
+  const settingsKey = `workshop_${workshopId}_settings`;
+  const storedSettings = ls.get(`supabase_doc_${settingsKey}`);
+  if (storedSettings) {
+    try {
+      S.settings = JSON.parse(storedSettings);
+    } catch (e) {
+      warn("Settings parse error:", e);
+      S.settings = null;
+    }
+  }
+  route();
+}
+
+function renderLobby() {
+  const box = $("lobby-workshops");
+  if (!box) return;
+
+  if (S.workshops.length === 0) {
+    box.innerHTML = '<div class="empty">Henüz atölyeniz yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  for (const ws of S.workshops) {
+    const isCurrent = S.currentWorkshop === ws.id;
+    const item = h("div", {
+      class: "workshop-item" + (isCurrent ? " current" : ""),
+      onclick: () => {
+        switchWorkshop(ws.id);
+        show("s-app");
+      }
+    },
+      h("div", { class: "workshop-info" },
+        h("div", { class: "workshop-name" }, ws.game),
+        h("div", { class: "workshop-meta" },
+          "Davet kodu: " + (ws.inviteToken || "yok").substring(0, 12) + "...",
+          " · Oluşturulma: " + new Date(ws.createdAt).toLocaleDateString("tr-TR")
+        )
+      ),
+      isCurrent ? h("span", { class: "workshop-badge" }, "Aktif") : h("span", { class: "workshop-arrow" }, "→")
+    );
+    box.appendChild(item);
+  }
+}
+
+function showLobby() {
+  // Update username display
+  const usernameEl = $("lobby-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+
+  // Render workshops
+  renderLobby();
+  show("s-lobby");
+}
+
+function showWelcomeScreen() {
+  const usernameEl = $("welcome-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+  S.welcomeShown = true;
+  show("s-welcome");
+}
+
+function showApp() {
+  show("s-app");
+}
+
 function route() {
-  console.log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings });
+  log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
   const st = S.settings;
   if (st === undefined) {
-    console.log("🔍 route: settings undefined, showing s-loading");
+    log("🔍 route: settings undefined, showing s-loading");
     return show("s-loading");
   }
 
   // Check if user has username
   if (!S.meId) {
-    console.log("🔍 route: no meId, showing s-login");
-    // Not logged in - show login screen if settings exist, or setup if first user
-    if (!st) {
-      show("s-login");
-    } else {
-      show("s-login");
-    }
+    log("🔍 route: no meId, showing s-login");
+    show("s-login");
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
     if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
+    if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
     return;
   }
 
-  console.log("🔍 route: has meId, checking settings", { st: !!st });
+  log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
 
-  // User has username - check if atolye is set up
-  if (!st) {
-    console.log("🔍 route: no settings, showing s-login or s-wait");
-    show(S.canWrite ? "s-login" : "s-wait");
+  // User has username - check if workshop selected
+  if (!S.currentWorkshop) {
+    // Check if we should show welcome screen or lobby
+    const showWelcome = !S.welcomeShown;
+    if (showWelcome) {
+      log("🔍 route: no workshop selected, showing welcome");
+      showWelcomeScreen();
+    } else {
+      log("🔍 route: no workshop selected, showing lobby");
+      showLobby();
+    }
     return;
   }
 
-  console.log("🔍 route: showing s-app", { game: st.game });
+  log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
 
-  // Atolye is set up and user has username - show app
-  show("s-app");
+  // Workshop selected - show app
+  showApp();
   const lockGameEl = $("lock-game");
   if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atolyesi";
   $("game-name").textContent = st.game || "Oyun Atolyesi";
@@ -2008,67 +2517,248 @@ function route() {
   render();
 }
 
-$("f-login").addEventListener("submit", async e => {
-  console.log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
+function showLobby() {
+  // Update username display
+  const usernameEl = $("lobby-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+
+  // Render workshops
+  renderLobby();
+  show("s-lobby");
+}
+
+function showWelcomeScreen() {
+  const usernameEl = $("welcome-username");
+  if (usernameEl) usernameEl.textContent = S.username || "Kullanıcı";
+  S.welcomeShown = true;
+  show("s-welcome");
+}
+
+function showApp() {
+  show("s-app");
+}
+
+function route() {
+  log("🔍 route() cagrildi", { meId: S.meId, settings: S.settings, hasSettings: !!S.settings, currentWorkshop: S.currentWorkshop });
+  const st = S.settings;
+  if (st === undefined) {
+    log("🔍 route: settings undefined, showing s-loading");
+    return show("s-loading");
+  }
+
+  // Check if user has username
+  if (!S.meId) {
+    log("🔍 route: no meId, showing s-login");
+    show("s-login");
+    // Clean up any active subscriptions
+    if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
+    if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
+    if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
+    if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
+    return;
+  }
+
+  log("🔍 route: has meId, checking settings", { st: !!st, currentWorkshop: S.currentWorkshop });
+
+  // User has username - check if workshop selected
+  if (!S.currentWorkshop) {
+    // Check if we should show welcome screen or lobby
+    const showWelcome = !S.welcomeShown;
+    if (showWelcome) {
+      log("🔍 route: no workshop selected, showing welcome");
+      showWelcomeScreen();
+    } else {
+      log("🔍 route: no workshop selected, showing lobby");
+      showLobby();
+    }
+    return;
+  }
+
+  log("🔍 route: showing s-app", { game: st.game, workshop: S.currentWorkshop });
+
+  // Workshop selected - show app
+  showApp();
+  const lockGameEl = $("lock-game");
+  if (lockGameEl) lockGameEl.textContent = st.game || "Oyun Atolyesi";
+  $("game-name").textContent = st.game || "Oyun Atolyesi";
+  if (document.activeElement !== $("st-game")) $("st-game").value = st.game || "";
+  if (!S.notesUnsub) {
+    S.liveSince = Date.now();
+    S.notesUnsub = S.db.collection("notes").orderBy("updatedAt", "desc").limit(500).onSnapshot(snap => {
+      const prev = S.notes;
+      S.notes = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      const news = detectNews(prev, S.notes);
+      render().then(() => { if (news.length) { playSound(topSound(news)); news.slice(0, 3).forEach(notify); } });
+    }, () => toast("Notlar yuklenemedi. Sayfayi yenile."));
+  }
+  startJobs();
+  startUpdates();
+  if (!S.lsUnsub) S.lsUnsub = S.db.collection("lastseen").onSnapshot(s => {
+    S.lastSeenOnline = Object.fromEntries(s.docs.map(d => [d.id, d.data().at]));
+    renderPeople(S.lastIds || new Set());
+  }, () => {});
+  if (!S.seenUnsub) S.seenUnsub = S.db.collection("chatseen").onSnapshot(s => {
+    S.seenBy = Object.fromEntries(s.docs.map(d => [d.id, d.data()]));
+    renderChat(false);
+  }, () => {});
+  if (!S.stkUnsub) S.stkUnsub = S.db.collection("stickers").orderBy("at", "asc").limit(100).onSnapshot(s => {
+    S.stickers = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(x => x.img);
+    if (!$("emoji-pop").hidden && S.epTab === "Sticker") renderEmojiPop();
+  }, () => {});
+  if (!S.chatUnsub) S.chatUnsub = S.db.collection("chat").orderBy("at", "desc").limit(300).onSnapshot(onChat, () => toast("Sohbet yuklenemedi. Sayfayi yenile."));
+  render();
+}
+
+addSafeListener($("f-login"), "submit", async e => {
+  log("🔍 Form submit basladi", { username: $("lg-username").value.trim() });
   e.preventDefault();
   const username = $("lg-username").value.trim();
-  const gameName = $("lg-game").value.trim();
   const err = $("lg-err");
 
-  console.log("🔍 Form validation", { username, gameName });
+  log("🔍 Form validation", { username });
   if (!username) { err.textContent = "Kullanici adi girin."; return; }
   if (username.length < 2) { err.textContent = "Kullanici adi en az 2 karakter olmali."; return; }
 
   const meId = generateUserId(username);
-  console.log("🔍 Generated meId", meId);
+  log("🔍 Generated meId", meId);
   ls.set(LS_USERNAME, username);
   S.meId = meId;
   S.username = username;
   S.canWrite = true;
-  console.log("🔍 S.meId set", S.meId);
+  log("🔍 S.meId set", S.meId);
 
-  // Create settings if first user
-  if (!S.settings) {
-    console.log("🔍 Creating settings, S.settings:", S.settings);
-    const game = gameName || "Oyun Atolyesi";
-    const newSettings = { game, createdBy: meId, createdAt: Date.now() };
-    await write(() => S.db.doc("team/settings").set(newSettings), err);
-    if (err.textContent) {
-      console.log("🔍 Write error:", err.textContent);
-      return;
-    }
-    // Yazma basariliysa S.settings'i lokal olarak set et
-    S.settings = newSettings;
-    console.log("🔍 S.settings lokal set edildi:", S.settings);
-  }
+  // Load user's workshops from localStorage
+  loadUserWorkshops();
 
-  // Her giriste ping satiri kontrolu/olusturma (406 hatasini onlemek icin)
-  try {
-    console.log("🔍 Ping satiri kontrol ediliyor...");
-    const pingDoc = await S.db.doc("pings/" + meId).get();
-    if (!pingDoc.exists) {
-      console.log("🔍 Ping satiri yok, ekleniyor...");
-      await S.db.doc("pings/" + meId).set({ id: meId });
-      console.log("🔍 Ping satiri eklendi");
+  // Check for invitation token in localStorage (from ?invite= URL parameter)
+  const storedInviteToken = ls.get('atolye-invite');
+  if (storedInviteToken) {
+    // Find workshop with this invite token
+    const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken);
+    if (targetWorkshop) {
+      log("🔍 Valid invitation token found, switching to workshop:", targetWorkshop.id);
+      // Switch to the target workshop
+      S.currentWorkshop = targetWorkshop.id;
+      // Load workshop settings
+      const settingsKey = `workshop_${targetWorkshop.id}_settings`;
+      const storedSettings = ls.get(`supabase_doc_${settingsKey}`);
+      if (storedSettings) {
+        try {
+          S.settings = JSON.parse(storedSettings);
+        } catch (e) {
+          warn('Settings parse error:', e);
+          S.settings = null;
+        }
+      }
+      // Add user to workshop avatars
+      const currentAvatars = S.settings.avatars || {};
+      currentAvatars[S.meId] = "rotate";
+      await write(() => S.db.doc("team/settings").update({ avatars: currentAvatars }), err);
+      if (!err.textContent) {
+        toast("Atölyeye davet edildiniz! Hoş geldiniz!");
+        ls.remove('atolye-invite'); // Clear the invite token after use
+      }
     } else {
-      console.log("🔍 Ping satiri zaten var");
+      warn("🔍 Invalid invitation token, no workshop found with this token");
+      toast("Geçersiz davet kodu!");
     }
-  } catch (pingErr) {
-    console.log("🔍 Ping kontrol/ekleme hatasi (onemsiz):", pingErr);
+    ls.remove('atolye-invite'); // Clear the invite token after use
   }
 
   err.textContent = "";
-  console.log("🔍 Calling route()");
+  log("🔍 Calling route() - showing lobby");
   route();
 });
 
-$("btn-logout").addEventListener("click", () => {
+addSafeListener($("btn-logout"), "click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
   S.username = null;
   S.canWrite = false;
+  S.welcomeShown = false;
+  route();
+}, {}, 'btn-logout-login');
+
+/* Lobby event handlers */
+addSafeListener($("btn-create-workshop"), "click", () => {
+  const modal = $("create-workshop-modal");
+  if (modal) {
+    modal.hidden = false;
+    setSafeTimeout(() => {
+      const input = $("cw-game");
+      if (input) input.focus();
+    }, 100);
+  }
+});
+
+addSafeListener($("btn-cancel-create"), "click", () => {
+  const modal = $("create-workshop-modal");
+  if (modal) modal.hidden = true;
+});
+
+addSafeListener($("f-create-workshop"), "submit", async e => {
+  e.preventDefault();
+  const gameName = $("cw-game").value.trim();
+  const err = $("cw-err");
+  if (!gameName) { err.textContent = "Atölye adı girin."; return; }
+  const workshop = await createWorkshop(gameName);
+  if (workshop) {
+    const modal = $("create-workshop-modal");
+    if (modal) modal.hidden = true;
+    $("cw-game").value = "";
+    toast("Atölye oluşturuldu!");
+    renderLobby();
+    // Auto-switch to new workshop
+    switchWorkshop(workshop.id);
+    showApp();
+  }
+});
+
+addSafeListener($("btn-join-workshop"), "click", () => {
+  const modal = $("join-workshop-modal");
+  if (modal) {
+    modal.hidden = false;
+    setSafeTimeout(() => {
+      const input = $("jw-code");
+      if (input) input.focus();
+    }, 100);
+  }
+});
+
+addSafeListener($("btn-cancel-join"), "click", () => {
+  const modal = $("join-workshop-modal");
+  if (modal) modal.hidden = true;
+});
+
+addSafeListener($("f-join-workshop"), "submit", async e => {
+  e.preventDefault();
+  const code = $("jw-code").value.trim();
+  const err = $("jw-err");
+  if (!code) { err.textContent = "Davet kodu girin."; return; }
+  // Navigate to URL with invite parameter
+  const link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
+  window.location.href = link;
+});
+
+addSafeListener($("btn-logout-lobby"), "click", () => {
+  ls.del(LS_USERNAME);
+  S.meId = null;
+  S.username = null;
+  S.canWrite = false;
+  S.currentWorkshop = null;
   route();
 });
+
+addSafeListener($("btn-open-lobby"), "click", () => {
+  S.welcomeShown = true;
+  showLobby();
+});
+
+addSafeListener(document, "click", e => {
+  if (e.target.classList.contains("modal-overlay") || e.target.classList.contains("modal-close")) {
+    document.querySelectorAll(".modal-overlay").forEach(m => m.hidden = true);
+  }
+}, {}, 'modal-close-handler');
 
 /* ---------- notifications & sound ---------- */
 let audioCtx = null;
@@ -2079,7 +2769,7 @@ function unlockAudio() {
     if (audioCtx.state === "suspended") audioCtx.resume();
   } catch (e) {}
 }
-for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, unlockAudio, { capture: true });
+for (const ev of ["pointerdown", "keydown"]) addSafeListener(document, ev, unlockAudio, { capture: true }, 'audio-unlock-' + ev);
 function chime() {
   if (!S.sound || !audioCtx || audioCtx.state !== "running") return;
   const t0 = audioCtx.currentTime;
@@ -2125,17 +2815,17 @@ function playSound(k, force) {
 const PRIO = ["done", "yes", "no", "new", "reply", "work", "edit"];
 const topSound = items => PRIO.find(p => items.some(i => i.snd === p)) || "new";
 for (const [k, s] of Object.entries(SOUNDS)) $("snd-list").append(h("button", { type: "button", class: "chip",
-  onclick: () => { unlockAudio(); setTimeout(() => playSound(k, true), 30); } }, "▶ " + s.label));
+  onclick: () => { unlockAudio(); setSafeTimeout(() => playSound(k, true), 30); } }, "▶ " + s.label));
 
 function renderSoundBtn() {
   const b = $("btn-sound");
   b.textContent = S.sound ? "Ses acik" : "Ses kapali";
   b.setAttribute("aria-pressed", String(S.sound));
 }
-$("btn-sound").addEventListener("click", () => {
+addSafeListener($("btn-sound"), "click", () => {
   S.sound = !S.sound; ls.set("atolye-sound", S.sound ? "on" : "off");
-  renderSoundBtn(); unlockAudio(); setTimeout(chime, 30);
-});
+  renderSoundBtn(); unlockAudio(); setSafeTimeout(chime, 30);
+}, {}, 'btn-sound-click');
 renderSoundBtn();
 
 function detectNews(prev, next) {
@@ -2178,7 +2868,7 @@ function notify(item) {
       h("div", { class: "nt" }, item.title),
       item.quote && h("div", { class: "nq" }, item.quote)));
   $("notifs").prepend(el);
-  setTimeout(() => el.remove(), 8000);
+  setSafeTimeout(() => el.remove(), 8000);
 }
 
 /* ---------- ping ("durt") ---------- */
@@ -2276,13 +2966,13 @@ function markAllSeen() {
   S.f.fresh = false;
   markChatSeen(); render();
 }
-$("bell").addEventListener("click", () => {
+addSafeListener($("bell"), "click", () => {
   const pop = $("pop-bell"); pop.hidden = !pop.hidden;
   $("bell").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) fillBell();
-});
-document.addEventListener("click", e => { if (!e.target.closest("#bellwrap")) closeBell(); });
-$("fresh-clear").addEventListener("click", () => { S.f.fresh = false; renderCards(); });
+}, {}, 'bell-click');
+addSafeListener(document, "click", e => { if (!e.target.closest("#bellwrap")) closeBell(); }, {}, 'bell-close-outside');
+addSafeListener($("fresh-clear"), "click", () => { S.f.fresh = false; renderCards(); }, {}, 'fresh-clear-click');
 function onChat(snap) {
   const prev = S.chatIds;
   S.chat = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(m => typeof m.at === "number").reverse();
@@ -2303,31 +2993,31 @@ function onChat(snap) {
   render();
 }
 function renderChat(forceBottom) {
-  const log = $("chat-log");
-  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
-  log.replaceChildren();
-  if (!S.chat.length) log.append(h("div", { class: "empty" }, h("strong", {}, "Sohbet bos"),
+  const chatLog = $("chat-log");
+  const nearBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 80;
+  chatLog.replaceChildren();
+  if (!S.chat.length) chatLog.append(h("div", { class: "empty" }, h("strong", {}, "Sohbet bos"),
     "Fikirlerden bagimsiz konusmak icin buraya yaz. Mesajlar kaydedilir, ikiniz de gorursunuz."));
   let lastDay = "", lastBy = null, lastAt = 0, lineDone = false;
   const lastMine = [...S.chat].reverse().find(x => x.a === S.meId);
   for (const m of S.chat) {
     if (!lineDone && S.view === "chat" && S.unreadFrom != null && m.a !== S.meId && m.at > S.unreadFrom && m.at <= S.unreadUntil) {
       const cnt = S.chat.filter(x => x.a !== S.meId && x.at > S.unreadFrom && x.at <= S.unreadUntil).length;
-      log.append(h("div", { class: "unread-line" }, cnt + " okunmamis mesaj")); lineDone = true; lastBy = null;
+      chatLog.append(h("div", { class: "unread-line" }, cnt + " okunmamis mesaj")); lineDone = true; lastBy = null;
     }
     const d = new Date(m.at);
     const day = d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
-    if (day !== lastDay) { log.append(h("div", { class: "day" }, day)); lastDay = day; lastBy = null; }
+    if (day !== lastDay) { chatLog.append(h("div", { class: "day" }, day)); lastDay = day; lastBy = null; }
     const mine = m.a === S.meId, grouped = lastBy === m.a && m.at - lastAt < 5 * 60 * 1000;
     let del = null;
     if (mine) {
       del = h("button", { class: "mdel", type: "button" }, "sil");
-      del.addEventListener("click", async () => {
+      addSafeListener(del, "click", async () => {
         if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "emin misin? tekrar tikla"; return; }
         await write(() => S.db.doc("chat/" + m.id).delete());
-      });
+      }, {}, 'chat-del-' + m.id);
     }
-    log.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
+    chatLog.append(h("div", { class: "msg" + (mine ? " me" : ""), style: "--uc:" + ucol(m.a), "data-mid": m.id },
       grouped ? h("span", { class: "ph" }) : avatar(m.a, "sm"),
       h("div", { class: "mb" },
         !grouped && h("div", { class: "mh" }, nameEl(m.a), " ", h("span", { class: "mt" }, d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }))),
@@ -2353,7 +3043,7 @@ function renderChat(forceBottom) {
           mine && m.t && S.editing !== m.id ? h("button", { class: "mdel", type: "button", onclick: () => startEdit(m) }, "✎ duzenle") : null, del))));
     lastBy = m.a; lastAt = m.at;
   }
-  if (forceBottom || nearBottom) log.scrollTop = log.scrollHeight;
+  if (forceBottom || nearBottom) chatLog.scrollTop = chatLog.scrollHeight;
   const ta = S.editing && $("edit-in");
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
@@ -2410,7 +3100,7 @@ async function sendChat() {
   inp.value = ""; S.chatImgs = []; S.chatFiles = []; renderChatAtt();
   const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
   const ok = await write(() => S.db.collection("chat").add({ a: S.meId, t: t.slice(0, 4000), at: Date.now(), imgs, files, re }));
-  if (!ok) { inp.value = t; S.chatImgs = imgs; S.chatFiles = files; renderChatAtt(); S.replyTo = re; renderReplyBar(); } else setTimeout(() => renderChat(true), 0);
+  if (!ok) { inp.value = t; S.chatImgs = imgs; S.chatFiles = files; renderChatAtt(); S.replyTo = re; renderReplyBar(); } else setSafeTimeout(() => renderChat(true), 0);
 }
 /* voice messages: record with the microphone, upload the clip as an asset (webm/mp4 container), store {voice:{id,type,dur}} in chat */
 const fmtDur = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
@@ -2426,12 +3116,12 @@ async function toggleVoice() {
   catch (e) { toast("Claude sayfasi mikrofona izin vermiyor. Sesli sohbet icin 📞 dugmesini kullan; yeni sekmede acilir."); return; }
   const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
   const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], start = Date.now();
-  const tick = setInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
+  const tick = setSafeInterval(() => { btn.textContent = "■ " + fmtDur((Date.now() - start) / 1000); }, 500);
   S.rec = { mr };
   btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); btn.textContent = "■ 0:00"; btn.title = "Kaydi bitir ve gonder";
   mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = async () => {
-    clearInterval(tick); stream.getTracks().forEach(t => t.stop()); S.rec = null;
+    clearSafeInterval(tick); stream.getTracks().forEach(t => t.stop()); S.rec = null;
     btn.classList.remove("rec"); btn.setAttribute("aria-pressed", "false"); btn.textContent = "🎤"; btn.title = "Sesli mesaj kaydet: bir kez tikla baslasin, tekrar tikla gonderilsin";
     const dur = (Date.now() - start) / 1000;
     if (dur < 0.7 || !chunks.length) { toast("Kayit cok kisa, gonderilmedi."); return; }
@@ -2443,19 +3133,19 @@ async function toggleVoice() {
     try { r = await S.assets.upload(blob, { type }); } catch (e) { toast(assetErr(e)); return; }
     const re = S.replyTo || null; S.replyTo = null; renderReplyBar();
     if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), voice: { id: r.id, type, dur: Math.round(dur) }, re })))
-      setTimeout(() => renderChat(true), 0);
+      setSafeTimeout(() => renderChat(true), 0);
   };
   mr.start(1000);
-  if (S.recMax) clearTimeout(S.recMax);
-  S.recMax = setTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
+  if (S.recMax) clearSafeTimeout(S.recMax);
+  S.recMax = setSafeTimeout(() => { if (S.rec && S.rec.mr === mr) mr.stop(); }, 5 * 60 * 1000);
 }
-$("voice-btn").addEventListener("click", toggleVoice);
+addSafeListener($("voice-btn"), "click", toggleVoice, {}, 'voice-btn-click');
 /* read receipts: each person keeps chatseen/<id> = time they last looked at the chat */
 S.seenBy = {};
 let seenTimer = null;
 function pushSeen() {
-  clearTimeout(seenTimer);
-  seenTimer = setTimeout(() => { if (S.db && S.meId) S.db.doc("chatseen/" + S.meId).set({ at: Date.now() }).catch(() => {}); }, 800);
+  clearSafeTimeout(seenTimer);
+  seenTimer = setSafeTimeout(() => { if (S.db && S.meId) S.db.doc("chatseen/" + S.meId).set({ at: Date.now() }).catch(() => {}); }, 800);
 }
 function seenTick(m, isLast) {
   const seenIds = Object.entries(S.seenBy || {}).filter(([id, v]) => id !== S.meId && v && v.at >= m.at).map(([id]) => id);
@@ -2473,11 +3163,11 @@ function cancelEdit() { S.editing = null; renderChat(false); }
 function editBox(m) {
   const ta = h("textarea", { class: "field", id: "edit-in", rows: "2", "aria-label": "Mesaji duzenle" });
   ta.value = S.editDraft;
-  ta.addEventListener("input", () => { S.editDraft = ta.value; });
-  ta.addEventListener("keydown", e => {
+  addSafeListener(ta, "input", () => { S.editDraft = ta.value; }, {}, 'edit-input-' + m.id);
+  addSafeListener(ta, "keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); saveEdit(m); }
     else if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
-  });
+  }, {}, 'edit-keydown-' + m.id);
   return h("div", { class: "editbox" }, ta, h("div", { class: "macts" },
     h("button", { class: "btn sm primary", type: "button", onclick: () => saveEdit(m) }, "Kaydet"),
     h("button", { class: "btn sm ghost", type: "button", onclick: cancelEdit }, "Iptal")));
@@ -2517,17 +3207,17 @@ function jumpTo(id) {
   if (!el) { toast("Bu mesaj artik sohbette yok"); return; }
   el.scrollIntoView({ block: "center", behavior: "smooth" });
   el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
-  setTimeout(() => el.classList.remove("flash"), 1500);
+  setSafeTimeout(() => el.classList.remove("flash"), 1500);
 }
-$("chat-in").addEventListener("keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } });
-$("chat-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); });
-$("chat-in").addEventListener("paste", e => {
+addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Escape" && S.replyTo) { S.replyTo = null; renderReplyBar(); } }, {}, 'chat-in-keydown-escape');
+addSafeListener($("chat-file"), "change", e => { const fs = [...e.target.files]; e.target.value = ""; addChatImages(fs); }, {}, 'chat-file-change');
+addSafeListener($("chat-in"), "paste", e => {
   const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
   if (fs.length) { e.preventDefault(); addChatImages(fs); }
-});
-$("chat").addEventListener("dragover", e => { e.preventDefault(); $("chat").classList.add("drag"); });
-$("chat").addEventListener("dragleave", e => { if (e.target === $("chat")) $("chat").classList.remove("drag"); });
-$("chat").addEventListener("drop", e => { e.preventDefault(); $("chat").classList.remove("drag"); addChatImages(e.dataTransfer.files); });
+}, {}, 'chat-in-paste');
+addSafeListener($("chat"), "dragover", e => { e.preventDefault(); $("chat").classList.add("drag"); }, {}, 'chat-dragover');
+addSafeListener($("chat"), "dragleave", e => { if (e.target === $("chat")) $("chat").classList.remove("drag"); }, {}, 'chat-dragleave');
+addSafeListener($("chat"), "drop", e => { e.preventDefault(); $("chat").classList.remove("drag"); addChatImages(e.dataTransfer.files); }, {}, 'chat-drop');
 
 /* emoji picker and the team's own sticker set */
 const EMOJI = {
@@ -2582,7 +3272,7 @@ async function sendCustomSticker(st) {
   if (!S.meId) return;
   toggleEmoji(false);
   if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), cst: { img: st.img, label: st.label || "", by: st.a } })))
-    setTimeout(() => renderChat(true), 0);
+    setSafeTimeout(() => renderChat(true), 0);
 }
 async function addCustomSticker(e) {
   const f = e.target.files[0]; e.target.value = "";
@@ -2608,9 +3298,9 @@ function insertEmoji(e) {
 async function sendSticker(key) {
   if (!S.meId) return;
   toggleEmoji(false);
-  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setTimeout(() => renderChat(true), 0);
+  if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), sticker: key }))) setSafeTimeout(() => renderChat(true), 0);
 }
-$("emoji-btn").addEventListener("click", () => toggleEmoji());
+addSafeListener($("emoji-btn"), "click", () => toggleEmoji(), {}, 'emoji-btn-click');
 
 /* polls on any topic: a chat message with poll {q, opts, closed}; votes in pv {userId: optionIndex} */
 S.pollDraft = null;
@@ -2618,13 +3308,13 @@ function togglePollForm(open) {
   const pop = $("poll-pop");
   pop.hidden = open === undefined ? !pop.hidden : !open;
   $("poll-btn").setAttribute("aria-expanded", String(!pop.hidden));
-  if (!pop.hidden) { if (!S.pollDraft) S.pollDraft = { q: "" }; renderPollForm(); setTimeout(() => $("poll-q") && $("poll-q").focus(), 0); }
+  if (!pop.hidden) { if (!S.pollDraft) S.pollDraft = { q: "" }; renderPollForm(); setSafeTimeout(() => $("poll-q") && $("poll-q").focus(), 0); }
 }
 function renderPollForm() {
   const d = S.pollDraft, pop = $("poll-pop");
   const q = h("input", { class: "field", id: "poll-q", maxlength: "200", placeholder: "Ne oylansin? Orn: Ana karakter hangi sinif olsun?" });
-  q.value = d.q; q.addEventListener("input", () => { d.q = q.value; });
-  q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); startPoll(); } });
+  q.value = d.q; addSafeListener(q, "input", () => { d.q = q.value; }, {}, 'poll-q-input');
+  addSafeListener(q, "keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); startPoll(); } }, {}, 'poll-q-keydown');
   pop.replaceChildren(h("span", { class: "label" }, "Yeni oylama · onay / ret"), q,
     h("div", { class: "actions" },
       h("button", { class: "btn primary sm", type: "button", onclick: startPoll }, "Oylamayi baslat"),
@@ -2635,7 +3325,7 @@ async function startPoll() {
   const q = S.pollDraft.q.trim();
   if (!q) { $("poll-err").textContent = "Oylamanin konusunu yaz."; return; }
   if (await write(() => S.db.collection("chat").add({ a: S.meId, t: "", at: Date.now(), poll: { q: q.slice(0, 200), opts: ["✓ Onayliyorum", "✕ Reddediyorum"], yn: true, closed: false }, pv: {} }), $("poll-err"))) {
-    S.pollDraft = null; togglePollForm(false); setTimeout(() => renderChat(true), 0);
+    S.pollDraft = null; togglePollForm(false); setSafeTimeout(() => renderChat(true), 0);
   }
 }
 function pollEl(m) {
@@ -2660,17 +3350,17 @@ async function votePoll(m, i) {
   if (!S.meId || (m.poll && m.poll.closed)) return;
   await write(() => S.db.doc("chat/" + m.id).update({ pv: { [S.meId]: i } }));
 }
-$("poll-btn").addEventListener("click", () => { toggleEmoji(false); togglePollForm(); });
+addSafeListener($("poll-btn"), "click", () => { toggleEmoji(false); togglePollForm(); }, {}, 'poll-btn-click');
 /* composedPath keeps the click's ancestors even when a re-render has already removed the clicked button */
 const clickedIn = (e, ...ids) => e.composedPath().some(el => el && ids.includes(el.id));
-document.addEventListener("click", e => { if (!clickedIn(e, "poll-pop", "poll-btn")) { const pp = $("poll-pop"); if (!pp.hidden) togglePollForm(false); } });
-document.addEventListener("click", e => { if (!e.composedPath().some(el => el && (el.id === "emoji-pop" || el.id === "emoji-btn"))) toggleEmoji(false); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("emoji-pop").hidden) toggleEmoji(false); });
-$("f-chat").addEventListener("submit", e => { e.preventDefault(); sendChat(); });
-$("chat-in").addEventListener("keydown", e => {
+addSafeListener(document, "click", e => { if (!clickedIn(e, "poll-pop", "poll-btn")) { const pp = $("poll-pop"); if (!pp.hidden) togglePollForm(false); } }, {}, 'poll-close-outside');
+addSafeListener(document, "click", e => { if (!e.composedPath().some(el => el && (el.id === "emoji-pop" || el.id === "emoji-btn"))) toggleEmoji(false); }, {}, 'emoji-close-outside');
+addSafeListener(document, "keydown", e => { if (e.key === "Escape" && !$("emoji-pop").hidden) toggleEmoji(false); }, {}, 'emoji-close-escape');
+addSafeListener($("f-chat"), "submit", e => { e.preventDefault(); sendChat(); }, {}, 'f-chat-submit');
+addSafeListener($("chat-in"), "keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
-});
-document.addEventListener("visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); });
+}, {}, 'chat-in-keydown-enter');
+addSafeListener(document, "visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); }, {}, 'chat-visibilitychange');
 
 /* ---------- "Claude'a is ver": requests that Ozgur's Claude Code session picks up and does ---------- */
 S.jobs = []; S.jobsPrev = null;
@@ -2780,9 +3470,9 @@ function renderJobs() {
       cancel));
   }
 }
-$("f-ai").addEventListener("submit", e => { e.preventDefault(); addJob(); });
-$("ai-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
-setInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
+addSafeListener($("f-ai"), "submit", e => { e.preventDefault(); addJob(); });
+addSafeListener($("ai-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
+setSafeInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
 
 /* ---------- game progress + release notes ---------- */
 const UPD_TYPES = { ozellik: ["Yeni ozellik", "gorev"], duzeltme: ["Hata duzeltme", "hata"], icerik: ["Icerik / hikâye", "hikaye"], denge: ["Denge / ayar", "mekanik"], gorsel: ["Gorsel / ses", "sanat"], diger: ["Diger", "fikir"] };
@@ -2857,7 +3547,7 @@ function renderBuilds() {
         h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.buildDel = null; renderBuilds(); } }, "Vazgec")) : null));
   });
 }
-$("f-build").addEventListener("submit", async e => {
+addSafeListener($("f-build"), "submit", async e => {
   e.preventDefault();
   if (!S.meId || S.buildUploading) return;
   const err = $("bd-err"); err.textContent = "";
@@ -2945,9 +3635,9 @@ function updEditForm(u) {
   const titleIn = h("input", { class: "field", id: "ue-title", value: e.title, maxlength: "120", placeholder: "Baslik", "aria-label": "Baslik" });
   const bodyIn = h("textarea", { class: "field", id: "ue-body", rows: "5", placeholder: "Ne degisti?", "aria-label": "Aciklama" });
   bodyIn.value = e.body;
-  verIn.addEventListener("input", () => { e.ver = verIn.value; });
-  titleIn.addEventListener("input", () => { e.title = titleIn.value; });
-  bodyIn.addEventListener("input", () => { e.body = bodyIn.value; });
+  addSafeListener(verIn, "input", () => { e.ver = verIn.value; }, {}, 'upd-edit-ver-input');
+  addSafeListener(titleIn, "input", () => { e.title = titleIn.value; }, {}, 'upd-edit-title-input');
+  addSafeListener(bodyIn, "input", () => { e.body = bodyIn.value; }, {}, 'upd-edit-body-input');
   const err = h("p", { class: "err" });
   const save = async () => {
     const title = e.title.trim(); if (!title) { err.textContent = "Baslik bos olamaz."; return; }
@@ -2960,15 +3650,15 @@ function updEditForm(u) {
     h("div", { class: "actions" },
       h("button", { class: "btn primary sm", type: "button", onclick: save }, "Kaydet"),
       h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.updEdit = null; renderUpd(); } }, "Vazgec")));
-  if (foc && /^ue-/.test(foc)) setTimeout(() => { const el = $(foc); if (el) el.focus(); }, 0);
+  if (foc && /^ue-/.test(foc)) setSafeTimeout(() => { const el = $(foc); if (el) el.focus(); }, 0);
   return box;
 }
 async function saveProgress(patch) {
   if (await write(() => S.db.doc("team/settings").update({ progress: Object.assign({ at: Date.now(), by: S.meId }, patch) }))) toast("Oyunun durumu guncellendi");
 }
-$("upd-pct").addEventListener("input", e => { $("upd-pctv").textContent = "%" + e.target.value; $("upd-bar").style.width = e.target.value + "%"; });
-$("upd-pct").addEventListener("change", e => saveProgress({ pct: Number(e.target.value) }));
-$("upd-phase").addEventListener("change", e => {
+addSafeListener($("upd-pct"), "input", e => { $("upd-pctv").textContent = "%" + e.target.value; $("upd-bar").style.width = e.target.value + "%"; }, {}, 'upd-pct-input');
+addSafeListener($("upd-pct"), "change", e => saveProgress({ pct: Number(e.target.value) }), {}, 'upd-pct-change');
+addSafeListener($("upd-phase"), "change", e => {
   const p = (S.settings && S.settings.progress) || {};
   const cur = PHASES[p.phase] ? p.phase : "fikir", pct = Number(p.pct) || 0;
   const from = PHASE_ORDER.indexOf(cur), to = PHASE_ORDER.indexOf(e.target.value);
@@ -2976,7 +3666,7 @@ $("upd-phase").addEventListener("change", e => {
   if (to === from + 1 && pct < 100) { e.target.value = cur; toast("Bu asama henuz %" + pct + ". Once %100 tamamla, sonra sonraki asamaya gecebilirsin."); return; }
   saveProgress(to === from + 1 ? { phase: e.target.value, pct: 0 } : { phase: e.target.value });
 });
-$("f-upd").addEventListener("submit", async e => {
+addSafeListener($("f-upd"), "submit", async e => {
   e.preventDefault();
   const title = $("upd-title").value.trim(); if (!title || !S.meId) return;
   const p = (S.settings && S.settings.progress) || {};
@@ -2988,45 +3678,82 @@ $("f-upd").addEventListener("submit", async e => {
 });
 
 /* ---------- settings ---------- */
-$("btn-settings").addEventListener("click", () => {
+function updateInviteCode() {
+  const invLinkEl = $("inv-link-value");
+  if (invLinkEl && S.settings && S.settings.inviteToken) {
+    invLinkEl.textContent = S.settings.inviteToken;
+  } else if (invLinkEl) {
+    invLinkEl.textContent = "(henüz davet kodu yok)";
+  }
+}
+
+addSafeListener($("btn-settings"), "click", () => {
   const pop = $("pop-settings"); pop.hidden = !pop.hidden;
   $("btn-settings").setAttribute("aria-expanded", String(!pop.hidden));
   if (!pop.hidden) {
     // Populate project URL in invite link field
-    const invLinkEl = $("inv-link-value");
-    if (invLinkEl) invLinkEl.textContent = location.origin + location.pathname;
+    updateInviteCode();
   }
-});
-document.addEventListener("click", e => {
+}, {}, 'btn-settings-click');
+addSafeListener(document, "click", e => {
   if (!e.target.closest(".menu")) { $("pop-settings").hidden = true; $("btn-settings").setAttribute("aria-expanded", "false"); }
-});
-$("f-game").addEventListener("submit", async e => {
+}, {}, 'settings-close-outside');
+addSafeListener($("f-game"), "submit", async e => {
   e.preventDefault();
   if (await write(() => S.db.doc("team/settings").update({ game: $("st-game").value.trim() }))) toast("Oyun adi kaydedildi");
-});
+}, {}, 'f-game-submit');
 
-/* invite link button in settings - just copy the project URL */
-$("btn-copy-invite").addEventListener("click", () => {
-  const link = location.origin + location.pathname;
-  navigator.clipboard.writeText(link).then(() => toast("Proje linki kopyalandi")).catch(() => toast("Kopyalanamadi"));
-});
+/* invite code copy button - copy just the invite code */
+addSafeListener($("btn-copy-invite"), "click", () => {
+  if (!S.settings || !S.settings.inviteToken) {
+    toast("Henüz davet kodu yok");
+    return;
+  }
+  navigator.clipboard.writeText(S.settings.inviteToken).then(() => toast("Davet kodu kopyalandi")).catch(() => toast("Kopyalanamadi"));
+}, {}, 'btn-copy-invite-click');
 
-$("btn-logout").addEventListener("click", () => {
+/* generate new invite link button */
+addSafeListener($("btn-generate-invite"), "click", async () => {
+  if (!S.settings || !S.meId) return;
+  const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  if (await write(() => S.db.doc("team/settings").update({ inviteToken: newToken }))) {
+    updateInviteCode();
+    toast("Yeni davet kodu olusturuldu");
+  }
+}, {}, 'btn-generate-invite-click');
+
+/* apply invite code from input */
+addSafeListener($("btn-apply-invite"), "click", () => {
+  const input = $("invite-code-input");
+  if (!input) return;
+  const code = input.value.trim();
+  if (!code) {
+    toast("Davet kodu girin");
+    return;
+  }
+  // Navigate to URL with invite parameter
+  const link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
+  window.location.href = link;
+}, {}, 'btn-apply-invite-click');
+
+addSafeListener($("btn-logout"), "click", () => {
   ls.del(LS_USERNAME);
   S.meId = null;
   S.username = null;
   S.canWrite = false;
+  S.welcomeShown = false;
   route();
-});
+}, {}, 'btn-logout-click');
 
-$("btn-publish").addEventListener("click", () => {
+addSafeListener($("btn-publish"), "click", () => {
   alert("Yerel build'i guncellemek icin:\n1. 'dist/index.html' dosyasini olustur: 'node build.js'\n2. Yerel sunucuda test et: 'npx serve dist -p 55450'\n3. GitHub Pages'e deploy: 'git push origin main'");
-});
+}, {}, 'btn-publish-click');
+
 // Kullanici Listesi butonu - event delegation ile (buton DOM'da olmasa bile calisir)
 // Bu sayede buton DOM'a eklendiginde (giris yapildiginda panel gorundugunde) otomatik calisir
-document.addEventListener("click", e => {
+addSafeListener(document, "click", e => {
   if (e.target.closest("#btn-user-list")) showUserListModal();
-});
+}, {}, 'btn-user-list-delegate');
 
 function showUserListModal() {
   // Mevcut kullanicilari topla
@@ -3070,7 +3797,7 @@ function showUserListModal() {
           ? '<p class="empty">Henuz kullanici yok.</p>'
           : users.map(u => `
             <div class="user-item" data-id="${u.id}">
-              <span class="user-name">${u.name}${u.isCurrent ? ' (Sen)' : ''}</span>
+              <span class="user-name">${escapeHtml(u.name)}${u.isCurrent ? ' (Sen)' : ''}</span>
               ${!u.isCurrent ? `<button class="btn danger btn-sm user-remove" data-id="${u.id}" title="Kullaniciyi cikar">Cikar</button>` : ''}
             </div>
           `).join('')}
@@ -3082,29 +3809,29 @@ function showUserListModal() {
   document.body.appendChild(modal);
 
   // Kapatma olaylari
-  modal.querySelector(".modal-close").addEventListener("click", () => modal.remove());
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+  addSafeListener(modal.querySelector(".modal-close"), "click", () => modal.remove(), {}, 'modal-close-btn');
+  addSafeListener(modal, "click", (e) => { if (e.target === modal) modal.remove(); }, {}, 'modal-close-overlay');
 
   // Cikarma butonlari
   modal.querySelectorAll(".user-remove").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
+    addSafeListener(btn, "click", async (e) => {
       const userId = e.target.dataset.id;
       if (confirm("Bu kullaniciyi cikarmak istediginizden emin misiniz?")) {
         await removeUser(userId);
         modal.remove();
         showUserListModal(); // Listeyi yenile
       }
-    });
+    }, {}, 'user-remove-' + btn.dataset.id);
   });
 
   // ESC tusu ile kapatma
   const handleEsc = (e) => {
     if (e.key === "Escape") {
       modal.remove();
-      document.removeEventListener("keydown", handleEsc);
+      clearListeners('user-list-esc');
     }
   };
-  document.addEventListener("keydown", handleEsc);
+  addSafeListener(document, "keydown", handleEsc, {}, 'user-list-esc');
 }
 
 async function removeUser(userId) {
@@ -3129,7 +3856,7 @@ async function removeUser(userId) {
 
     toast("Kullanici cikarildi");
   } catch (e) {
-    console.error("Kullanici cikarma hatasi:", e);
+    error("Kullanici cikarma hatasi:", e);
     toast("Kullanici cikarilamadi: " + e.message);
   }
 }
@@ -3199,14 +3926,14 @@ async function addNewImages(files) {
   const got = await uploadMedia(files, $("nw-err"));
   S.uploading -= files.length; S.newImages.push(...got.images); S.newVideos.push(...got.videos); renderNewThumbs();
 }
-$("nw-file").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; addNewImages(fs); });
-$("f-new").addEventListener("paste", e => {
+addSafeListener($("nw-file"), "change", e => { const fs = [...e.target.files]; e.target.value = ""; addNewImages(fs); }, {}, 'nw-file-change');
+addSafeListener($("f-new"), "paste", e => {
   const fs = [...((e.clipboardData && e.clipboardData.files) || [])];
   if (fs.length) { e.preventDefault(); addNewImages(fs); }
-});
-$("f-new").addEventListener("dragover", e => { e.preventDefault(); $("f-new").classList.add("drag"); });
-$("f-new").addEventListener("dragleave", () => $("f-new").classList.remove("drag"));
-$("f-new").addEventListener("drop", e => { e.preventDefault(); $("f-new").classList.remove("drag"); addNewImages(e.dataTransfer.files); });
+}, {}, 'f-new-paste');
+addSafeListener($("f-new"), "dragover", e => { e.preventDefault(); $("f-new").classList.add("drag"); }, {}, 'f-new-dragover');
+addSafeListener($("f-new"), "dragleave", () => $("f-new").classList.remove("drag"), {}, 'f-new-dragleave');
+addSafeListener($("f-new"), "drop", e => { e.preventDefault(); $("f-new").classList.remove("drag"); addNewImages(e.dataTransfer.files); }, {}, 'f-new-drop');
 
 /* ---------- new note ---------- */
 function renderNewKinds() {
@@ -3216,7 +3943,7 @@ function renderNewKinds() {
     onclick: () => { S.newKind = k; renderNewKinds(); }
   }, h("span", { class: "dot", style: `background:var(--k-${k})` }), n));
 }
-$("f-new").addEventListener("submit", async e => {
+addSafeListener($("f-new"), "submit", async e => {
   e.preventDefault();
   const title = $("nw-title").value.trim(); if (!title) return;
   const now = Date.now(), btn = $("nw-submit");
@@ -3239,17 +3966,17 @@ function setView(v) {
   $("wrap").classList.toggle("chatmode", wide);
   $("chat").hidden = !chat; $("ai").hidden = !ai; $("upd").hidden = !upd; $("cards").hidden = wide; $("mainbar").hidden = wide;
   if (upd) { markUpdSeen(); renderUpd(); }
-  if (ai) setTimeout(() => $("ai-in").focus(), 0);
+  if (ai) setSafeTimeout(() => $("ai-in").focus(), 0);
   renderFilters(); renderCards();
-  if (chat) { renderChat(true); markChatSeen(); setTimeout(() => $("chat-in").focus(), 0); }
+  if (chat) { renderChat(true); markChatSeen(); setSafeTimeout(() => $("chat-in").focus(), 0); }
 }
-$("tab-active").addEventListener("click", () => setView("active"));
-$("tab-star").addEventListener("click", () => setView("star"));
-$("tab-done").addEventListener("click", () => setView("done"));
-$("tab-chat").addEventListener("click", () => setView("chat"));
-$("tab-ai").addEventListener("click", () => setView("ai"));
-$("tab-upd").addEventListener("click", () => setView("upd"));
-$("q").addEventListener("input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); });
+addSafeListener($("tab-active"), "click", () => setView("active"), {}, 'tab-active-click');
+addSafeListener($("tab-star"), "click", () => setView("star"), {}, 'tab-star-click');
+addSafeListener($("tab-done"), "click", () => setView("done"), {}, 'tab-done-click');
+addSafeListener($("tab-chat"), "click", () => setView("chat"), {}, 'tab-chat-click');
+addSafeListener($("tab-ai"), "click", () => setView("ai"), {}, 'tab-ai-click');
+addSafeListener($("tab-upd"), "click", () => setView("upd"), {}, 'tab-upd-click');
+addSafeListener($("q"), "input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); }, {}, 'q-input');
 function seg(boxId, opts, key) {
   const box = $(boxId); box.replaceChildren();
   for (const [v, n] of opts) box.append(h("button", {
@@ -3297,39 +4024,49 @@ function isFresh0(n) {
   return (n.replies || []).some(r => r.at > S.prevSeen && r.a !== S.meId);
 }
 async function render() {
-  const ids = new Set();
-  for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
-  if (S.meId) ids.add(S.meId);
-  for (const m of S.chat || []) ids.add(m.a);
-  for (const j of S.jobs || []) ids.add(j.a);
-  for (const u of S.updates || []) ids.add(u.a);
-  if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
-  if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
-  ids.delete(undefined); ids.delete(null);
-  if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
-  computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  try {
+    const ids = new Set();
+    for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
+    if (S.meId) ids.add(S.meId);
+    for (const m of S.chat || []) ids.add(m.a);
+    for (const j of S.jobs || []) ids.add(j.a);
+    for (const u of S.updates || []) ids.add(u.a);
+    if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
+    if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
+    ids.delete(undefined); ids.delete(null);
+    if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
+    computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+  } catch (e) {
+    error("Render error:", e);
+  }
 }
 /* online status: everyone with the page open is in the room; closing the tab leaves it */
 const PRES = { on: "cevrimici", away: "arka planda", off: "cevrimdisi" };
 S.online = {};
 async function startPresence() {
-  const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
-  if (!room) return voiceFallback();
-  S.room = room;
-  const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
-  push();
-  document.addEventListener("visibilitychange", push);
-  window.addEventListener("pagehide", () => markLastSeen(S.meId));
-  /* typing indicator: presence.typing is true while I type, cleared 3 s after the last key or on send */
-  let typingTimer = null, typingOn = false;
-  const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
-  $("chat-in").addEventListener("input", () => {
+  try {
+    const room = window.claude && window.claude.use ? await window.claude.use("room") : null;
+    if (!room) return voiceFallback();
+    S.room = room;
+    const push = () => { room.presence({ visible: !document.hidden }).catch(() => {}); if (document.hidden) markLastSeen(S.meId); };
+    push();
+    addSafeListener(document, "visibilitychange", push, {}, 'presence-visibilitychange');
+    addSafeListener(window, "pagehide", () => markLastSeen(S.meId), {}, 'presence-pagehide');
+    /* typing indicator: presence.typing is true while I type, cleared 3 s after the last key or on send */
+    let typingTimer = null, typingOn = false;
+    const setTyping = v => { if (v !== typingOn) { typingOn = v; room.presence({ typing: v }).catch(() => {}); } };
+    addSafeListener($("chat-in"), "input", () => {
+  } catch (e) {
+    error("startPresence error:", e);
+    voiceFallback();
+  }
+}
     setTyping(!!$("chat-in").value.trim());
-    clearTimeout(typingTimer); typingTimer = setTimeout(() => setTyping(false), 3000);
-  });
-  $("f-chat").addEventListener("submit", () => { clearTimeout(typingTimer); setTyping(false); });
-  $("chat-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearTimeout(typingTimer); setTyping(false); } });
-  $("chat-in").addEventListener("blur", () => { clearTimeout(typingTimer); setTyping(false); });
+    clearSafeTimeout(typingTimer); typingTimer = setSafeTimeout(() => setTyping(false), 3000);
+  }, {}, 'chat-typing-input');
+  addSafeListener($("f-chat"), "submit", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-submit');
+  addSafeListener($("chat-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey) { clearSafeTimeout(typingTimer); setTyping(false); } }, {}, 'chat-typing-keydown');
+  addSafeListener($("chat-in"), "blur", () => { clearSafeTimeout(typingTimer); setTyping(false); }, {}, 'chat-typing-blur');
   room.onPeers(ch => {
     const typing = new Set();
     for (const p of ch.peers) if (p.kind === "viewer" && p.by && p.by !== S.meId && p.presence && p.presence.typing === true) typing.add(p.by);
@@ -3357,7 +4094,7 @@ function openVoicePage() {
 function voiceFallback() {
   $("vcall").hidden = false;
   $("vc-join").textContent = "📞 Sesli sohbet baslat";
-  $("vc-join").addEventListener("click", openVoicePage);
+  addSafeListener($("vc-join"), "click", openVoicePage, {}, 'vc-join-fallback');
 }
 function startVoiceCall(room) {
   if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return voiceFallback();
@@ -3448,7 +4185,7 @@ function startVoiceCall(room) {
     room.presence({ voice: null, vm: null }).catch(() => {});
     sync();
   };
-  $("vc-join").addEventListener("click", async () => {
+  addSafeListener($("vc-join"), "click", async () => {
     if (V.stream) return leave();
     try {
       V.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
@@ -3459,15 +4196,15 @@ function startVoiceCall(room) {
     room.presence({ voice: true, vm: false }).catch(() => {});
     sync();
     toast("Sesli sohbete katildin");
-  });
-  $("vc-mute").addEventListener("click", () => {
+  }, {}, 'vc-join-click');
+  addSafeListener($("vc-mute"), "click", () => {
     if (!V.stream) return;
     V.muted = !V.muted;
     V.stream.getAudioTracks().forEach(t => (t.enabled = !V.muted));
     room.presence({ vm: V.muted }).catch(() => {});
     sync();
-  });
-  window.addEventListener("pagehide", leave);
+  }, {}, 'vc-mute-click');
+  addSafeListener(window, "pagehide", leave, {}, 'voice-pagehide');
 }
 /* last time someone was online: written when their tab hides or closes, and by whoever sees them leave */
 S.lastSeenOnline = {};
@@ -3476,7 +4213,7 @@ function presLabel(id, st) {
   const at = S.lastSeenOnline[id];
   return PRES[st] + (st === "off" && at && typeof at === 'number' && !isNaN(at) ? " · son gorulme " + ago(at) : "");
 }
-setInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
+setSafeInterval(() => { if (S.lastIds) renderPeople(S.lastIds); }, 60000);
 S.typing = new Set();
 function renderTyping() {
   const box = $("typing"), ids = [...S.typing];
@@ -3781,11 +4518,11 @@ function renderEvents() {
 
 /* ---------- detail sheet ---------- */
 function closeSheet() { S.openId = null; S.rEdit = null; S.rDel = null; $("sheet-root").replaceChildren(); }
-document.addEventListener("keydown", e => {
+addSafeListener(document, "keydown", e => {
   if (e.key !== "Escape") return;
   const lb = document.querySelector(".lightbox");
   if (lb) lb.remove(); else if (S.openId) closeSheet();
-});
+}, {}, 'global-escape');
 
 function openSheet(id) {
   const n = S.notes.find(x => x.id === id); if (!n) return;
@@ -3842,9 +4579,9 @@ function openSheet(id) {
     const replies = (cur.replies || []).concat([{ a: S.meId, t, at }]);
     if (await write(() => ref.update({ replies, updatedAt: at, updatedBy: S.meId }), saveErr)) replyIn.value = "";
   };
-  replyIn.addEventListener("keydown", e => {
+  addSafeListener(replyIn, "keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendReply(); }
-  });
+  }, {}, 'sh-reply-keydown');
   const addImgs = async e => {
     const files = [...e.target.files]; e.target.value = "";
     const got = await uploadMedia(files, saveErr); if (!got.images.length && !got.videos.length) return;
@@ -3912,13 +4649,13 @@ function renderSheetLive() {
   const media = (n.images || []).map(x => ["images", x]).concat((n.videos || []).map(x => ["videos", x]));
   for (const [field, mid] of media) {
     const rm = S.canWrite && n.author === S.meId && h("button", { class: "btn ghost sm", type: "button" }, "Kaldir");
-    if (rm) rm.addEventListener("click", async () => {
+    if (rm) addSafeListener(rm, "click", async () => {
       if (rm.dataset.sure !== "1") { rm.dataset.sure = "1"; rm.textContent = "Emin misin? Tekrar tikla"; return; }
       const cur = S.notes.find(x => x.id === n.id); if (!cur) return;
       const at = Date.now();
       if (await write(() => S.db.doc("notes/" + n.id).update({ [field]: (cur[field] || []).filter(x => x !== mid), updatedAt: at, updatedBy: S.meId })))
         if (S.assets) S.assets.delete(mid).catch(() => {});
-    });
+    }, {}, 'gallery-rm-' + field + '-' + mid);
     const el = field === "images"
       ? h("img", { src: imgUrl(mid), alt: "", loading: "lazy", onclick: () => lightbox(mid) })
       : h("video", { src: imgUrl(mid), controls: true, preload: "metadata", playsinline: true });
@@ -3946,8 +4683,8 @@ function replyBody(n, r) {
   if (mine && S.rEdit && S.rEdit.key === k && S.rEdit.noteId === n.id) {
     const ta = h("textarea", { class: "field", id: "sh-redit", rows: "2", style: "min-height:60px", "aria-label": "Yaniti duzenle" });
     ta.value = S.rEdit.t;
-    ta.addEventListener("input", () => { if (S.rEdit) S.rEdit.t = ta.value; });
-    ta.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); S.rEdit = null; renderSheetLive(); } });
+    addSafeListener(ta, "input", () => { if (S.rEdit) S.rEdit.t = ta.value; }, {}, 'redit-input-' + k);
+    addSafeListener(ta, "keydown", e => { if (e.key === "Escape") { e.stopPropagation(); S.rEdit = null; renderSheetLive(); } }, {}, 'redit-keydown-' + k);
     return h("div", {}, ta, h("div", { class: "actions", style: "margin-top:6px" },
       h("button", { class: "btn primary sm", type: "button", onclick: () => saveReplyEdit(n.id, k) }, "Kaydet"),
       h("button", { class: "btn ghost sm", type: "button", onclick: () => { S.rEdit = null; renderSheetLive(); } }, "Vazgec")));
