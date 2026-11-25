@@ -1,4 +1,4 @@
-const KINDS = [
+﻿const KINDS = [
   ["fikir", "Fikir"], ["mekanik", "Mekanik"], ["hikaye", "Hikâye"],
   ["sanat", "Sanat & Ses"], ["gorev", "Gorev"], ["hata", "Hata"], ["videolar", "Videolar"]
 ];
@@ -597,7 +597,6 @@ function route() {
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
-    if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
     if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
     return;
   }
@@ -689,7 +688,6 @@ function route() {
     // Clean up any active subscriptions
     if (S.notesUnsub) { S.notesUnsub(); S.notesUnsub = null; S.notes = []; closeSheet(); }
     if (S.chatUnsub) { S.chatUnsub(); S.chatUnsub = null; S.chat = []; S.chatIds = null; }
-    if (S.jobsUnsub) { S.jobsUnsub(); S.jobsUnsub = null; S.jobs = []; S.jobsPrev = null; }
     if (S.lobbyUnsub) { S.lobbyUnsub(); S.lobbyUnsub = null; }
     return;
   }
@@ -928,7 +926,7 @@ const SOUNDS = {
   no:    { label: "Ret",           wave: "sawtooth", notes: [[392, 0, .2], [294, .17, .42]], vol: .09 },
   work:  { label: "Ilgileniyor",   wave: "triangle", notes: [[330, 0, .08], [330, .14, .08], [494, .28, .16]] },
   chat:  { label: "Sohbet mesaji", wave: "sine",     notes: [[600, 0, .14, 1200]] },
-  ai:    { label: "Claude cevabi", wave: "sine",     notes: [[1046.5, 0, .14], [1318.5, .08, .14], [1568, .16, .14], [2093, .24, .35]], vol: .14 },
+  ai:    { label: "AI cevabi", wave: "sine",     notes: [[1046.5, 0, .14], [1318.5, .08, .14], [1568, .16, .14], [2093, .24, .35]], vol: .14 },
   ping:  { label: "Durtme",        fn: force => pingSound(force) }
 };
 function playSound(k, force) {
@@ -998,7 +996,7 @@ function detectNews(prev, next) {
 }
 function notify(item) {
   const el = h("button", { type: "button", class: "notif", style: kindVars(item.kind) + ";--uc:" + ucol(item.by),
-    onclick: () => { el.remove(); if (item.chat) setView("chat"); else if (item.ai) setView("ai"); else if (item.upd) setView("upd"); else openSheet(item.id); } },
+    onclick: () => { el.remove(); if (item.chat) setView("chat"); else if (item.upd) setView("upd"); else openSheet(item.id); } },
     avatar(item.by),
     h("div", {}, h("div", {}, nameEl(item.by), " " + item.text),
       h("div", { class: "nt" }, item.title),
@@ -1498,118 +1496,6 @@ addSafeListener($("chat-in"), "keydown", e => {
 }, {}, 'chat-in-keydown-enter');
 addSafeListener(document, "visibilitychange", () => { if (!document.hidden && S.view === "chat") markChatSeen(); }, {}, 'chat-visibilitychange');
 
-/* ---------- "Claude'a is ver": requests that Ozgur's Claude Code session picks up and does ---------- */
-S.jobs = []; S.jobsPrev = null;
-const JOB_ST = {
-  bekliyor: ["wait", "Sirada"],
-  calisiyor: ["running", "Claude uzerinde calisiyor…"],
-  soru: ["running", "Ozgur'un onayi bekleniyor"],
-  bitti: ["done", "✓ Bitti"],
-  iptal: ["stopped", "Iptal edildi"]
-};
-const jobOpen = j => !j.status || j.status === "bekliyor" || j.status === "calisiyor" || j.status === "soru";
-function startJobs() {
-  if (S.jobsUnsub || !S.db) return;
-  S.jobsUnsub = S.db.collection("jobs").orderBy("at", "desc").limit(50).onSnapshot(snap => {
-    const prev = S.jobsPrev;
-    S.jobs = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
-    if (prev) for (const j of S.jobs) {
-      const was = prev[j.id];
-      if (!was && j.a !== S.meId && j.at > S.liveSince) {
-        playSound("reply");
-        render().then(() => notify({ ai: true, by: j.a, text: "Claude'a is verdi", title: String(j.t).slice(0, 140) }));
-      } else if (was && was !== "bitti" && j.status === "bitti") {
-        playSound("ai");
-        render().then(() => notify({ ai: true, by: j.a, text: "→ Claude isi bitirdi ✦", title: String(j.t).slice(0, 140) }));
-      }
-    }
-    S.jobsPrev = Object.fromEntries(S.jobs.map(j => [j.id, j.status || "bekliyor"]));
-    render();
-  }, () => {});
-}
-function mdInline(s) {
-  return String(s).split(/(\*\*[^*]+\*\*)/g).flatMap(part => /^\*\*[^*]+\*\*$/.test(part) ? [h("b", {}, part.slice(2, -2))] : linkify(part));
-}
-function mdLite(text) {
-  return String(text || "").split("\n").map(line => {
-    const hd = line.match(/^#{1,4}\s+(.*)/);
-    if (hd) return h("div", { class: "mdh" }, mdInline(hd[1]));
-    const li = line.match(/^(\s*)[-*•]\s+(.*)/);
-    if (li) return h("div", { style: "padding-left:" + (10 + li[1].length * 6) + "px" }, "• ", mdInline(li[2]));
-    return line.trim() ? h("div", {}, mdInline(line)) : h("div", { class: "mdsp" });
-  });
-}
-async function addJob() {
-  const inp = $("ai-in"), t = inp.value.trim();
-  if (!t || !S.meId) return;
-  inp.value = "";
-  if (!await write(() => S.db.collection("jobs").add({ a: S.meId, t: t.slice(0, 4000), at: Date.now(), status: "bekliyor" }), $("ai-err"))) inp.value = t;
-  else toast("Is siraya eklendi");
-}
-/* auto-off window, adjustable by anyone in 15-minute steps: 5..120 minutes, default 30 */
-const claudeMinutes = () => Math.min(480, Math.max(5, Number(S.settings && S.settings.claude && S.settings.claude.minutes) || 30));
-const fmtMins = m => m >= 60 ? Math.floor(m / 60) + " sa" + (m % 60 ? " " + (m % 60) + " dk" : "") : m + " dk";
-async function adjustMinutes(delta) {
-  const next = Math.min(480, Math.max(5, claudeMinutes() + delta));
-  if (await write(() => S.db.doc("team/settings").update({ claude: { minutes: next } }))) toast("Sure " + fmtMins(next) + " oldu");
-}
-async function toggleClaude(on) {
-  const cl = (S.settings && S.settings.claude) || {};
-  const patch = { on, by: S.meId };
-  if (on) patch.since = Date.now();
-  if (await write(() => S.db.doc("team/settings").update({ claude: patch })))
-    toast(on ? "Claude aciliyor, en gec 1 dakika icinde islere bakmaya baslar" : "Claude kapatildi");
-  return cl;
-}
-function renderJobs() {
-  const box = $("ai-runs"); if (!box) return;
-  const open = S.jobs.filter(jobOpen);
-  $("n-ai").hidden = !open.length; $("n-ai").textContent = open.length;
-  /* on: 1-minute checks; 30 minutes after it was opened or the last job, Claude switches itself off */
-  const cl = (S.settings && S.settings.claude) || {};
-  const lastJob = S.jobs.reduce((m, j) => Math.max(m, j.at || 0), 0);
-  const mins = claudeMinutes();
-  const left = cl.on ? Math.max(0, Math.ceil((Math.max(cl.since || 0, lastJob) + mins * 60000 - Date.now()) / 60000)) : 0;
-  const starting = cl.on && !(cl.ack >= cl.since);
-  const st = $("claude-status");
-  st.className = "cstat " + (cl.on ? (starting ? "starting" : "on") : "off");
-  const statusChildren = [
-    h("span", { class: "cdot", "aria-hidden": "true" }),
-    h("div", { class: "ctext" },
-      h("div", {}, cl.on ? (starting ? "Claude aciliyor… en gec 1 dakika icinde devreye girer" : "Claude acik · her dakika yeni islere bakiyor") : "Claude kapali · isler sirada bekler"),
-      h("div", { class: "csub" }, cl.on
-        ? (cl.by ? who(cl.by) + " acti · " : "") + "yeni is gelmezse yaklasik " + left + " dk sonra kendiliginden kapanir"
-        : "Ozgur acinca " + fmtMins(mins) + " acik kalir, her yeni is sureyi bastan baslatir. Bu surede is gelmezse Claude tamamen kapanir."),
-      ...(S.canWrite && S.meId && cl.on ? [h("div", { class: "tadj" },
-        h("button", { class: "btn sm", type: "button", disabled: mins <= 5, onclick: () => adjustMinutes(-15) }, "− 15 dk"),
-        h("span", { class: "mono" }, "Sure: " + fmtMins(mins)),
-        h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(15) }, "+ 15 dk"),
-        h("button", { class: "btn sm", type: "button", disabled: mins >= 480, onclick: () => adjustMinutes(60) }, "+ 1 saat"),
-        h("span", { class: "csub" }, "en fazla 8 saat"))] : []),
-    ...(S.canWrite && S.meId && cl.on ? [h("button", { class: "btn sm", type: "button", onclick: () => toggleClaude(false) }, "Kapat")] : [])
-    )
-  ];
-  st.replaceChildren(...statusChildren.filter(c => c != null));
-  box.replaceChildren();
-  if (!S.jobs.length) box.append(h("div", { class: "empty" }, h("strong", {}, "Henuz is yok"),
-    "Soldan Claude'a yapmasini istedigin seyi yaz. Sirasi gelince yapilir ve sonucu burada gorunur."));
-  for (const j of S.jobs) {
-    const [cls, label] = JOB_ST[j.status || "bekliyor"] || JOB_ST.bekliyor;
-    const cancel = j.a === S.meId && (!j.status || j.status === "bekliyor")
-      ? h("button", { class: "btn ghost sm", type: "button", onclick: () => write(() => S.db.doc("jobs/" + j.id).update({ status: "iptal" })) }, "Iptal et")
-      : null;
-    box.append(h("article", { class: "airun", style: "--uc:" + ucol(j.a) },
-      h("div", { class: "airh" }, avatar(j.a, "sm"), nameEl(j.a), h("span", { class: "mt" }, " · " + ago(j.at)),
-        h("span", { class: "aist " + cls }, label)),
-      h("div", { class: "aipr" }, linkify(j.t)),
-      j.answer ? h("div", { class: "aians" }, mdLite(j.answer)) : null,
-      cancel));
-  }
-}
-addSafeListener($("f-ai"), "submit", e => { e.preventDefault(); addJob(); });
-addSafeListener($("ai-in"), "keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); addJob(); } });
-setSafeInterval(() => { if (S.view === "ai") renderJobs(); }, 30000);
-
 /* ---------- game progress + release notes ---------- */
 const UPD_TYPES = { ozellik: ["Yeni ozellik", "gorev"], duzeltme: ["Hata duzeltme", "hata"], icerik: ["Icerik / hikâye", "hikaye"], denge: ["Denge / ayar", "mekanik"], gorsel: ["Gorsel / ses", "sanat"], diger: ["Diger", "fikir"] };
 const PHASES = { fikir: "Fikir asamasi", prototip: "Prototip", alfa: "Alfa", beta: "Beta", yayin: "Yayinda" };
@@ -2098,11 +1984,10 @@ function inView(n) { return S.view === "done" ? n.status === "bitti" : n.status 
 function setView(v) {
   if (v !== "chat") S.unreadFrom = null;
   S.view = v; S.f.status = "all";
-  const chat = v === "chat", ai = v === "ai", upd = v === "upd", wide = chat || ai || upd;
+  const chat = v === "chat", upd = v === "upd", wide = chat || upd;
   $("wrap").classList.toggle("chatmode", wide);
-  $("chat").hidden = !chat; $("ai").hidden = !ai; $("upd").hidden = !upd; $("cards").hidden = wide; $("mainbar").hidden = wide;
+  $("chat").hidden = !chat; $("upd").hidden = !upd; $("cards").hidden = wide; $("mainbar").hidden = wide;
   if (upd) { markUpdSeen(); renderUpd(); }
-  if (ai) setSafeTimeout(() => $("ai-in").focus(), 0);
   renderFilters(); renderCards();
   if (chat) { renderChat(true); markChatSeen(); setSafeTimeout(() => $("chat-in").focus(), 0); }
 }
@@ -2110,7 +1995,6 @@ addSafeListener($("tab-active"), "click", () => setView("active"), {}, 'tab-acti
 addSafeListener($("tab-star"), "click", () => setView("star"), {}, 'tab-star-click');
 addSafeListener($("tab-done"), "click", () => setView("done"), {}, 'tab-done-click');
 addSafeListener($("tab-chat"), "click", () => setView("chat"), {}, 'tab-chat-click');
-addSafeListener($("tab-ai"), "click", () => setView("ai"), {}, 'tab-ai-click');
 addSafeListener($("tab-upd"), "click", () => setView("upd"), {}, 'tab-upd-click');
 addSafeListener($("q"), "input", e => { S.f.q = e.target.value.trim().toLocaleLowerCase("tr"); renderCards(); }, {}, 'q-input');
 function seg(boxId, opts, key) {
@@ -2165,13 +2049,12 @@ async function render() {
     for (const n of S.notes) { ids.add(n.author); ids.add(n.updatedBy); for (const r of n.replies || []) ids.add(r.a); }
     if (S.meId) ids.add(S.meId);
     for (const m of S.chat || []) ids.add(m.a);
-    for (const j of S.jobs || []) ids.add(j.a);
     for (const u of S.updates || []) ids.add(u.a);
     if (S.settings && S.settings.progress && S.settings.progress.by) ids.add(S.settings.progress.by);
     if (S.settings && S.settings.createdBy) ids.add(S.settings.createdBy);
     ids.delete(undefined); ids.delete(null);
     if (S.user && ids.size) S.profiles = await S.user.profiles([...ids]);
-    computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderJobs(); renderUpd();
+    computeColors(); S.lastIds = ids; /* watchPings(); */ renderAvList(); renderPeople(ids); renderNewKinds(); renderFilters(); renderCards(); renderEvents(); renderSheetLive(); renderChat(false); renderChatBadge(); renderUpd();
   } catch (e) {
     error("Render error:", e);
   }
@@ -2417,7 +2300,6 @@ function renderCards() {
   $("tab-star").setAttribute("aria-selected", String(S.view === "star"));
   $("tab-done").setAttribute("aria-selected", String(S.view === "done"));
   $("tab-chat").setAttribute("aria-selected", String(S.view === "chat"));
-  $("tab-ai").setAttribute("aria-selected", String(S.view === "ai"));
   $("tab-upd").setAttribute("aria-selected", String(S.view === "upd"));
   const sum = $("donesum"); sum.replaceChildren();
   sum.hidden = S.view !== "done" || !doneAll.length;
@@ -2849,3 +2731,4 @@ async function deleteReply(id, k) {
 
 renderNewKinds();
 boot();
+

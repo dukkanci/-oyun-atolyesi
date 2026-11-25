@@ -203,7 +203,6 @@
         <button type="button" role="tab" id="tab-star" aria-selected="false">★ Yıldızlılar <span class="n" id="n-star"></span></button>
         <button type="button" role="tab" id="tab-done" aria-selected="false">✓ Bitenler <span class="n" id="n-done"></span></button>
         <button type="button" role="tab" id="tab-chat" aria-selected="false">Sohbet <span class="n unread" id="n-chat" title="Okunmamış mesaj" hidden></span></button>
-        <button type="button" role="tab" id="tab-ai" aria-selected="false">✦ Claude'a iş ver <span class="n" id="n-ai" title="Sıradaki iş" hidden></span></button>
         <button type="button" role="tab" id="tab-upd" aria-selected="false">Güncellemeler <span class="n unread" id="n-upd" title="Yeni güncelleme" hidden></span></button>
       </div>
       <div class="donesum" id="donesum" hidden></div>
@@ -229,25 +228,6 @@
           <textarea class="field" id="chat-in" rows="2" placeholder="Mesaj yaz, Enter ile gönder · fotoğraf ya da dosyayı Ctrl+V ile yapıştır ya da sürükle…" aria-label="Mesaj"></textarea>
           <button class="btn primary" type="submit">Gönder</button>
         </form>
-      </section>
-      <section class="panel chat ai" id="ai" hidden>
-        <div class="chat-head"><h2>Claude'a iş ver</h2><span class="hint">Buraya yazılan işleri Özgür'ün bilgisayarındaki Claude yapar: soru cevaplar, atölyeye not ekler, sayfaya özellik ekler. Herkesin verdiği işler burada herkese görünür.</span></div>
-        <div class="ai-body">
-          <div class="ai-col">
-            <div class="cstat off" id="claude-status"></div>
-            <form class="ai-add" id="f-ai">
-              <label class="label" for="ai-in">Yeni iş</label>
-              <textarea class="field" id="ai-in" rows="5" placeholder="Claude ne yapsın? Örnek: Düşmanlar için 3 farklı davranış fikri yaz ve atölyeye Fikir olarak ekle. Enter gönderir, Shift + Enter yeni satır."></textarea>
-              <button class="btn primary" type="submit">✦ İşi gönder</button>
-            </form>
-            <p class="err" id="ai-err"></p>
-            <p class="hint" style="margin:0">Riskli işler (toplu silme, şifre ya da paylaşım değişikliği gibi) önce Özgür'e sorulur.</p>
-          </div>
-          <div class="ai-col">
-            <span class="label">İşler</span>
-            <div class="ai-runs" id="ai-runs"></div>
-          </div>
-        </div>
       </section>
       <section class="panel chat upd" id="upd" hidden>
         <div class="chat-head"><h2>Güncellemeler</h2><span class="hint">Oyunun ilerlemesi ve sürüm notları. Herkes yeni güncelleme notu ekleyebilir, eklenince herkese bildirim gider.</span></div>

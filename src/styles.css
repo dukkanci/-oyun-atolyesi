@@ -353,43 +353,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .wrap.chatmode { grid-template-columns: minmax(0, 1fr) 300px; }
 .wrap.chatmode .side { display: none; }
 @media (max-width: 1100px) { .wrap.chatmode { grid-template-columns: minmax(0, 1fr); } }
-.ai-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 18px; padding: 16px; }
-@media (max-width: 900px) { .ai-body { grid-template-columns: minmax(0, 1fr); } }
-.ai-col { display: grid; gap: 10px; align-content: start; min-width: 0; }
-.ai-queue { display: grid; gap: 8px; }
-.aiq { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
-.aiq .av.sm { width: 32px; height: 32px; }
-.ai-add { display: grid; gap: 8px; }
-.ai-opt { display: flex; align-items: center; gap: 8px; font-size: 14px; flex-wrap: wrap; }
-.ai-opt .field { width: auto; padding: 6px 10px; }
-.ai-runs { display: grid; gap: 14px; max-height: calc(100vh - 260px); overflow-y: auto; align-content: start; }
-.airun { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--paper-2); display: grid; gap: 8px; min-width: 0; }
-.airh { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
-.aist { margin-left: auto; font: 700 11px/1 var(--f-mono); padding: 4px 7px; border-radius: 5px; border: 1px solid var(--line); }
-.aist.done { color: var(--k-gorev); border-color: var(--k-gorev); }
-.aist.running { color: var(--accent); border-color: var(--accent); }
-.aist.error, .aist.stopped { color: var(--danger); border-color: var(--danger); }
-.aip summary { cursor: pointer; font-size: 13px; color: var(--muted); }
-.aipr { font-size: 13px; padding: 4px 0 4px 10px; border-left: 3px solid var(--uc); margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.aians { overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: var(--ink); display: grid; gap: 2px; }
-.aians > div { white-space: pre-wrap; }
-.aians a { color: var(--teal); }
-.cstat { display: flex; align-items: center; gap: 10px; font-weight: 700; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line); }
-.cstat .cdot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
-.cstat.on { border-color: var(--k-gorev); color: var(--k-gorev); }
-.cstat.on .cdot { background: var(--k-gorev); box-shadow: 0 0 0 4px color-mix(in srgb, var(--k-gorev) 25%, transparent); }
-.cstat.off { color: var(--muted); }
-.cstat.starting { border-color: var(--accent); color: var(--accent); }
-.cstat.starting .cdot { background: var(--accent); }
-.cstat .ctext { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.cstat .csub { font-weight: 400; font-size: 12px; color: var(--muted); }
-.cstat { flex-wrap: wrap; }
-.tadj { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; color: var(--ink); font-weight: 600; }
-.aist.wait { color: var(--muted); }
 .mdh { font: 700 16px/1.3 var(--f-display); margin-top: 8px; }
 .mdsp { height: 6px; }
-#tab-ai { color: var(--accent); }
-#tab-ai[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .prog { display: grid; gap: 8px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .pbar { height: 14px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); overflow: hidden; }
 .pbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--k-mekanik), var(--k-gorev)); border-radius: 999px; }
@@ -439,7 +404,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* each tab gets its own color; the palette repeats by position, so tabs added later get a color automatically */
 /* colors are keyed by tab id (not position) so adding a tab never shifts the others */
 #tab-active { --tc: #3b82f6; } #tab-done { --tc: #16a34a; }
-#tab-chat { --tc: #db2777; } #tab-ai { --tc: #8b5cf6; }
+#tab-chat { --tc: #db2777; }
 #tab-upd { --tc: #ea7317; } #tab-star { --tc: #ca8a04; }
 .tabs button { border-radius: 8px 8px 0 0; border-bottom-color: color-mix(in srgb, var(--tc, var(--accent)) 45%, transparent); background: color-mix(in srgb, var(--tc, var(--accent)) 8%, transparent); }
 .tabs button:hover { background: color-mix(in srgb, var(--tc, var(--accent)) 16%, transparent); }
