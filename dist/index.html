@@ -2216,6 +2216,46 @@ async function boot() {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
+  // Initialize global workshops early (needed for invite token processing)
+  loadGlobalWorkshops();
+  setupLocalStorageSync();
+  startGlobalWorkshopsListener();
+
+  // Process invite token early if user is already logged in and workshops are loaded
+  async function processInviteToken() {
+    const storedInviteToken = ls.get('atolye-invite');
+    if (!storedInviteToken) return;
+
+    // Wait for workshops to be loaded (max 3 seconds)
+    let attempts = 0;
+    while ((!S.workshops || S.workshops.length === 0) && attempts < 30) {
+      await new Promise(r => setTimeout(r, 100));
+      attempts++;
+    }
+
+    const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken && !w.isDeleted);
+    if (targetWorkshop) {
+      // Check if user is logged in
+      if (S.meId) {
+        // User is logged in, join the workshop immediately
+        await joinWorkshop(targetWorkshop.id);
+        toast("Atölyeye davet edildiniz! Hoş geldiniz!");
+      } else {
+        // User not logged in yet, keep token for after login
+        log("🔍 Valid invitation token found, waiting for login");
+      }
+    } else {
+      warn("🔍 Invalid invitation token, no workshop found with this token");
+      toast("Geçersiz davet kodu!");
+    }
+    ls.remove('atolye-invite');
+  }
+
+  // Process invite token if user is already logged in
+  if (S.meId) {
+    setSafeTimeout(() => processInviteToken(), 500);
+  }
+
   // Listen to settings changes
   // onSnapshot fires immediately with current document, so no initial route() call needed
   db.doc("team/settings").onSnapshot(snap => {
@@ -2737,41 +2777,6 @@ addSafeListener($("f-login"), "submit", async e => {
 
   // Load user's workshops from localStorage
   loadUserWorkshops();
-
-  // Check for invitation token in localStorage (from ?invite= URL parameter)
-  const storedInviteToken = ls.get('atolye-invite');
-  if (storedInviteToken) {
-    // Find workshop with this invite token
-    const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken);
-    if (targetWorkshop) {
-      log("🔍 Valid invitation token found, switching to workshop:", targetWorkshop.id);
-      // Switch to the target workshop
-      S.currentWorkshop = targetWorkshop.id;
-      // Load workshop settings
-      const settingsKey = `workshop_${targetWorkshop.id}_settings`;
-      const storedSettings = ls.get(`supabase_doc_${settingsKey}`);
-      if (storedSettings) {
-        try {
-          S.settings = JSON.parse(storedSettings);
-        } catch (e) {
-          warn('Settings parse error:', e);
-          S.settings = null;
-        }
-      }
-      // Add user to workshop avatars
-      const currentAvatars = S.settings.avatars || {};
-      currentAvatars[S.meId] = "rotate";
-      await write(() => S.db.doc("team/settings").update({ avatars: currentAvatars }), err);
-      if (!err.textContent) {
-        toast("Atölyeye davet edildiniz! Hoş geldiniz!");
-        ls.remove('atolye-invite'); // Clear the invite token after use
-      }
-    } else {
-      warn("🔍 Invalid invitation token, no workshop found with this token");
-      toast("Geçersiz davet kodu!");
-    }
-    ls.remove('atolye-invite'); // Clear the invite token after use
-  }
 
   err.textContent = "";
   log("🔍 Calling route() - showing lobby");
