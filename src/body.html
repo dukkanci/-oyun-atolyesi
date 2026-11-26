@@ -78,7 +78,7 @@
         </div>
         <form id="f-create-workshop" style="display:grid;gap:8px">
           <label class="label" for="cw-game">Atölye Adı</label>
-          <input class="field" id="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
+          <input class="field" id="cw-game" name="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
           <p class="err" id="cw-err"></p>
           <button class="btn primary" type="submit">Oluştur</button>
           <button class="btn ghost" type="button" id="btn-cancel-create">İptal</button>
@@ -95,7 +95,7 @@
         </div>
         <form id="f-join-workshop" style="display:grid;gap:8px">
           <label class="label" for="jw-code">Davet Kodu</label>
-          <input class="field" id="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
+          <input class="field" id="jw-code" name="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
           <p class="err" id="jw-err"></p>
           <button class="btn primary" type="submit">Katıl</button>
           <button class="btn ghost" type="button" id="btn-cancel-join">İptal</button>

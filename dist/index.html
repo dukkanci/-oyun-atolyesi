@@ -909,7 +909,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
         </div>
         <form id="f-create-workshop" style="display:grid;gap:8px">
           <label class="label" for="cw-game">Atölye Adı</label>
-          <input class="field" id="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
+          <input class="field" id="cw-game" name="cw-game" maxlength="60" required placeholder="ör. Proje Fener">
           <p class="err" id="cw-err"></p>
           <button class="btn primary" type="submit">Oluştur</button>
           <button class="btn ghost" type="button" id="btn-cancel-create">İptal</button>
@@ -926,7 +926,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
         </div>
         <form id="f-join-workshop" style="display:grid;gap:8px">
           <label class="label" for="jw-code">Davet Kodu</label>
-          <input class="field" id="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
+          <input class="field" id="jw-code" name="jw-code" maxlength="60" required placeholder="ör. a1b2c3d4e5f6">
           <p class="err" id="jw-err"></p>
           <button class="btn primary" type="submit">Katıl</button>
           <button class="btn ghost" type="button" id="btn-cancel-join">İptal</button>
@@ -2220,6 +2220,8 @@ async function boot() {
   // onSnapshot fires immediately with current document, so no initial route() call needed
   db.doc("team/settings").onSnapshot(snap => {
     S.settings = snap.exists ? toCamelCase(snap.data()) : null;
+    // Admin flag: settings.isAdmin === true and the admin user ID matches current user
+    S.isAdmin = S.settings?.isAdmin === true && S.settings?.adminUserId === S.meId;
     route();
   }, () => show("s-noaccess"));
 
@@ -2230,6 +2232,11 @@ async function boot() {
       fileInput.name = "nw-file";
     }
   }, 0);
+
+  // Initialize global workshops
+  loadGlobalWorkshops();
+  setupLocalStorageSync();
+  startGlobalWorkshopsListener();
 }
 
 function generateUserId(username) {
@@ -2242,45 +2249,71 @@ function generateUserId(username) {
   return "user_" + Math.abs(hash).toString(36);
 }
 
-/* ---------- Lobby/Workshop Management ---------- */
-const WORKSHOPS_KEY = "atolye-workshops";
+/* ---------- Lobby/Workshop Management (Global) ---------- */
+const GLOBAL_WORKSHOPS_KEY = "atolye-global-workshops";
+const WORKSHOPS_KEY = "atolye-workshops"; // Legacy per-user key (kept for backward compatibility)
+const MAX_MEMBERS_DEFAULT = 5;
 
-function loadUserWorkshops() {
+function loadGlobalWorkshops() {
+  // Firebase will handle real-time updates via listener
+  // This is for localStorage fallback only
+  if (S.db) {
+    log("🔍 Firebase available, global workshops will be loaded via listener");
+    return;
+  }
   try {
-    const stored = ls.get(WORKSHOPS_KEY);
+    const stored = ls.get(GLOBAL_WORKSHOPS_KEY);
     S.workshops = stored ? JSON.parse(stored) : [];
-    log("🔍 Loaded user workshops:", S.workshops);
+    log("🔍 Loaded global workshops from localStorage:", S.workshops);
   } catch (e) {
-    warn("Workshops load error:", e);
+    warn("Global workshops load error:", e);
     S.workshops = [];
   }
+  renderLobby();
 }
 
-function saveUserWorkshops() {
+function saveGlobalWorkshops(workshops) {
+  if (S.db) return; // Firebase handles persistence
   try {
-    ls.set(WORKSHOPS_KEY, JSON.stringify(S.workshops));
+    ls.set(GLOBAL_WORKSHOPS_KEY, JSON.stringify(workshops));
   } catch (e) {
-    warn("Workshops save error:", e);
+    warn("Global workshops save error:", e);
   }
 }
 
+function setupLocalStorageSync() {
+  // Cross-tab sync for localStorage fallback
+  addSafeListener(window, "storage", e => {
+    if (e.key === GLOBAL_WORKSHOPS_KEY && !S.db) {
+      loadGlobalWorkshops();
+    }
+  }, {}, 'global-workshops-sync');
+}
+
+// Legacy function for backward compatibility (per-user workshop list)
 function addWorkshopToUser(workshop) {
-  const exists = S.workshops.some(w => w.id === workshop.id);
-  if (!exists) {
-    S.workshops.push(workshop);
-    saveUserWorkshops();
+  try {
+    const stored = ls.get(WORKSHOPS_KEY);
+    const userWorkshops = stored ? JSON.parse(stored) : [];
+    const exists = userWorkshops.some(w => w.id === workshop.id);
+    if (!exists) {
+      userWorkshops.push(workshop);
+      ls.set(WORKSHOPS_KEY, JSON.stringify(userWorkshops));
+    }
+  } catch (e) {
+    warn("Add workshop to user error:", e);
   }
 }
 
-function removeWorkshopFromUser(workshopId) {
-  S.workshops = S.workshops.filter(w => w.id !== workshopId);
-  saveUserWorkshops();
-}
-
-function getWorkshopSettings(workshopId) {
-  // In a multi-workshop architecture, settings would be stored per workshop
-  // For now, we use the same team/settings but with workshop-specific data
-  return S.settings;
+function startGlobalWorkshopsListener() {
+  if (S.globalWorkshopsUnsub || !S.db) return;
+  S.globalWorkshopsUnsub = S.db.collection("workshops")
+    .where("isDeleted", "==", false)
+    .onSnapshot(snapshot => {
+      const workshops = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.workshops = workshops;
+      renderLobby();
+    }, err => warn("Workshops listener error:", err));
 }
 
 async function createWorkshop(gameName) {
@@ -2297,11 +2330,31 @@ async function createWorkshop(gameName) {
     inviteToken,
     createdBy: meId,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    members: { [meId]: { joinedAt: now, lastSeen: now } },
+    memberCount: 1,
+    maxMembers: MAX_MEMBERS_DEFAULT,
+    isDeleted: false
   };
 
-  // Save workshop settings (in a real multi-workshop setup, this would be a separate document)
-  // For now, we store workshop info in user's localStorage
+  // Add to global workshops
+  S.workshops.push(workshopData);
+
+  // Save to Firebase or localStorage
+  if (S.db) {
+    try {
+      await S.db.collection("workshops").doc(workshopId).set(workshopData);
+      log("🔍 Workshop created in Firebase:", workshopId);
+    } catch (e) {
+      warn("Firebase workshop create error:", e);
+      // Fallback to localStorage
+      saveGlobalWorkshops(S.workshops);
+    }
+  } else {
+    saveGlobalWorkshops(S.workshops);
+  }
+
+  // Also add to user's local workshops for backward compatibility
   addWorkshopToUser({ id: workshopId, game: workshopData.game, inviteToken: workshopData.inviteToken, createdAt: now });
 
   // Create settings for this workshop (using a workshop-specific key)
@@ -2315,11 +2368,116 @@ async function createWorkshop(gameName) {
   };
   ls.set(`supabase_doc_${settingsKey}`, JSON.stringify(newSettings));
 
-  // Initialize workshop-specific collections
-  // In a real implementation, these would be separate Firestore collections
-  // For now, we use prefixed keys in localStorage
-
+  log("🔍 Workshop created:", workshopData);
   return workshopData;
+}
+
+async function joinWorkshop(workshopId) {
+  if (!S.meId) return;
+  const ws = S.workshops.find(w => w.id === workshopId);
+  if (!ws) return;
+  if (ws.members[S.meId]) return; // already member
+  if (ws.memberCount >= (ws.maxMembers || MAX_MEMBERS_DEFAULT)) {
+    toast("Atölye dolu!");
+    return;
+  }
+
+  const now = Date.now();
+  ws.members[S.meId] = { joinedAt: now, lastSeen: now };
+  ws.memberCount = Object.keys(ws.members).length;
+  ws.updatedAt = now;
+
+  if (S.db) {
+    try {
+      await S.db.collection("workshops").doc(workshopId).update({
+        members: ws.members,
+        memberCount: ws.memberCount,
+        updatedAt: now
+      });
+      log("🔍 Joined workshop in Firebase:", workshopId);
+    } catch (e) {
+      warn("Firebase join error:", e);
+      saveGlobalWorkshops(S.workshops);
+    }
+  } else {
+    saveGlobalWorkshops(S.workshops);
+  }
+
+  toast("Atölyeye katıldınız!");
+  renderLobby();
+  // Auto-switch to workshop
+  switchWorkshop(workshopId);
+}
+
+async function leaveWorkshop(workshopId) {
+  if (!S.meId) return;
+  const ws = S.workshops.find(w => w.id === workshopId);
+  if (!ws || !ws.members[S.meId]) return;
+
+  delete ws.members[S.meId];
+  ws.memberCount = Object.keys(ws.members).length;
+  ws.updatedAt = Date.now();
+
+  if (S.db) {
+    try {
+      await S.db.collection("workshops").doc(workshopId).update({
+        members: ws.members,
+        memberCount: ws.memberCount,
+        updatedAt: ws.updatedAt
+      });
+      log("🔍 Left workshop in Firebase:", workshopId);
+    } catch (e) {
+      warn("Firebase leave error:", e);
+      saveGlobalWorkshops(S.workshops);
+    }
+  } else {
+    saveGlobalWorkshops(S.workshops);
+  }
+
+  toast("Atölyeden çıktınız");
+  renderLobby();
+}
+
+async function deleteWorkshop(workshopId) {
+  const ws = S.workshops.find(w => w.id === workshopId);
+  if (!ws) return;
+
+  const isCreator = ws.createdBy === S.meId;
+  const isAdmin = S.isAdmin;
+  if (!isCreator && !isAdmin) { toast("Bu atölyeyi silme yetkiniz yok"); return; }
+
+  if (!confirm("Bu atölye ve tüm içeriği silinecek. Emin misiniz?")) return;
+
+  ws.isDeleted = true;
+  ws.updatedAt = Date.now();
+
+  if (S.db) {
+    try {
+      await S.db.collection("workshops").doc(workshopId).update({
+        isDeleted: true,
+        updatedAt: ws.updatedAt
+      });
+      log("🔍 Workshop deleted in Firebase:", workshopId);
+    } catch (e) {
+      warn("Firebase delete error:", e);
+      saveGlobalWorkshops(S.workshops);
+    }
+  } else {
+    saveGlobalWorkshops(S.workshops);
+  }
+
+  // Clean up workshop-specific localStorage
+  const settingsKey = `supabase_doc_workshop_${workshopId}_settings`;
+  ls.del(settingsKey);
+
+  toast("Atölye silindi");
+  renderLobby();
+
+  // If user was in this workshop, go back to lobby
+  if (S.currentWorkshop === workshopId) {
+    S.currentWorkshop = null;
+    showLobby();
+  }
 }
 
 function switchWorkshop(workshopId) {
@@ -2342,29 +2500,36 @@ function renderLobby() {
   const box = $("lobby-workshops");
   if (!box) return;
 
-  if (S.workshops.length === 0) {
-    box.innerHTML = '<div class="empty">Henüz atölyeniz yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>';
+  // Filter out deleted workshops
+  const activeWorkshops = S.workshops.filter(ws => !ws.isDeleted);
+
+  if (activeWorkshops.length === 0) {
+    box.innerHTML = '<div class="empty">Henüz atölye yok. Yeni atölye oluşturun veya davet koduyla katılın.</div>';
     return;
   }
 
   box.innerHTML = '';
-  for (const ws of S.workshops) {
-    const isCurrent = S.currentWorkshop === ws.id;
-    const item = h("div", {
-      class: "workshop-item" + (isCurrent ? " current" : ""),
-      onclick: () => {
-        switchWorkshop(ws.id);
-        show("s-app");
-      }
-    },
+  for (const ws of activeWorkshops) {
+    const isMember = ws.members && ws.members[S.meId];
+    const isCreator = ws.createdBy === S.meId;
+    const isAdmin = S.isAdmin;
+    const canDelete = isCreator || isAdmin;
+    const isFull = ws.memberCount >= (ws.maxMembers || MAX_MEMBERS_DEFAULT);
+
+    const item = h("div", { class: "workshop-item" },
       h("div", { class: "workshop-info" },
         h("div", { class: "workshop-name" }, ws.game),
         h("div", { class: "workshop-meta" },
-          "Davet kodu: " + (ws.inviteToken || "yok").substring(0, 12) + "...",
-          " · Oluşturulma: " + new Date(ws.createdAt).toLocaleDateString("tr-TR")
+          `Üyeler: ${ws.memberCount}/${ws.maxMembers || MAX_MEMBERS_DEFAULT}`,
+          ` · Oluşturulma: ${new Date(ws.createdAt).toLocaleDateString("tr-TR")}`,
+          isFull ? ` · <span class="badge-full">Dolu</span>` : ""
         )
       ),
-      isCurrent ? h("span", { class: "workshop-badge" }, "Aktif") : h("span", { class: "workshop-arrow" }, "→")
+      h("div", { class: "workshop-actions" },
+        !isMember && !isFull ? h("button", { class: "btn primary", type: "button", onclick: () => joinWorkshop(ws.id) }, "Katıl") : null,
+        isMember ? h("button", { class: "btn", type: "button", onclick: () => switchWorkshop(ws.id) }, "Aç") : null,
+        canDelete ? h("button", { class: "btn danger", type: "button", onclick: () => { if (confirm("Bu atölyeyi silmek istediğinizden emin misiniz?")) deleteWorkshop(ws.id); } }, "Sil") : null
+      )
     );
     box.appendChild(item);
   }
