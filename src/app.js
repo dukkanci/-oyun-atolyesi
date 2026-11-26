@@ -439,7 +439,7 @@ async function boot() {
       warn("🔍 Invalid invitation token, no workshop found with this token");
       toast("Geçersiz davet kodu!");
     }
-    ls.remove('atolye-invite');
+    ls.del('atolye-invite');
   }
 
   // Process invite token if user is already logged in
@@ -484,6 +484,18 @@ function generateUserId(username) {
 const GLOBAL_WORKSHOPS_KEY = "atolye-global-workshops";
 const WORKSHOPS_KEY = "atolye-workshops"; // Legacy per-user key (kept for backward compatibility)
 const MAX_MEMBERS_DEFAULT = 5;
+
+// Legacy function for loading user's workshops from localStorage (backward compatibility)
+function loadUserWorkshops() {
+  try {
+    const stored = ls.get(WORKSHOPS_KEY);
+    S.workshops = stored ? JSON.parse(stored) : [];
+    log("🔍 Loaded user workshops:", S.workshops);
+  } catch (e) {
+    warn("Workshops load error:", e);
+    S.workshops = [];
+  }
+}
 
 function loadGlobalWorkshops() {
   // Firebase will handle real-time updates via listener
