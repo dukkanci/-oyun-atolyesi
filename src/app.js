@@ -1047,7 +1047,11 @@ addSafeListener($("btn-cancel-join"), "click", () => {
 });
 
 addSafeListener($("btn-refresh-lobby"), "click", () => {
-  // Force re-fetch workshops from Firebase
+  // Force re-fetch: unsubscribe existing listener first
+  if (S.globalWorkshopsUnsub) {
+    S.globalWorkshopsUnsub();
+    S.globalWorkshopsUnsub = null;
+  }
   loadGlobalWorkshops();
   startGlobalWorkshopsListener();
   toast("Lobi yenilendi!");
