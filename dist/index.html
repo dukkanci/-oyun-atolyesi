@@ -897,6 +897,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       <div class="lobby-actions">
         <button class="btn primary" id="btn-create-workshop" type="button">Yeni Atölye Oluştur</button>
         <button class="btn" id="btn-join-workshop" type="button">Davet Kodu ile Katıl</button>
+        <button class="btn ghost" id="btn-refresh-lobby" type="button" title="Lobiyi yenile">🔄 Yenile</button>
       </div>
     </div>
 
@@ -2841,6 +2842,13 @@ addSafeListener($("btn-join-workshop"), "click", () => {
 addSafeListener($("btn-cancel-join"), "click", () => {
   const modal = $("join-workshop-modal");
   if (modal) modal.hidden = true;
+});
+
+addSafeListener($("btn-refresh-lobby"), "click", () => {
+  // Force re-fetch workshops from Firebase
+  loadGlobalWorkshops();
+  startGlobalWorkshopsListener();
+  toast("Lobi yenilendi!");
 });
 
 addSafeListener($("f-join-workshop"), "submit", async e => {

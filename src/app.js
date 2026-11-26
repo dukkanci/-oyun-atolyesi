@@ -1034,6 +1034,13 @@ addSafeListener($("btn-cancel-join"), "click", () => {
   if (modal) modal.hidden = true;
 });
 
+addSafeListener($("btn-refresh-lobby"), "click", () => {
+  // Force re-fetch workshops from Firebase
+  loadGlobalWorkshops();
+  startGlobalWorkshopsListener();
+  toast("Lobi yenilendi!");
+});
+
 addSafeListener($("f-join-workshop"), "submit", async e => {
   e.preventDefault();
   const code = $("jw-code").value.trim();
