@@ -413,22 +413,43 @@ async function boot() {
   startGlobalWorkshopsListener();
 
   // Process invite token early if user is already logged in and workshops are loaded
-  async function processInviteToken() {
+  async function processInviteToken(retryCount = 0) {
     const storedInviteToken = ls.get('atolye-invite');
     if (!storedInviteToken) return;
 
-    // Wait for workshops to be loaded (max 3 seconds)
+    // Wait for workshops to be loaded (max 5 seconds)
     let attempts = 0;
-    while ((!S.workshops || S.workshops.length === 0) && attempts < 30) {
+    while ((!S.workshops || S.workshops.length === 0) && attempts < 50) {
       await new Promise(r => setTimeout(r, 100));
       attempts++;
     }
 
-    const targetWorkshop = S.workshops.find(w => w.inviteToken === storedInviteToken && !w.isDeleted);
+    if (!S.workshops || S.workshops.length === 0) {
+      // No workshops loaded - try to force reload
+      if (retryCount < 2) {
+        log("⚠️ Workshops not loaded, retrying...");
+        await loadGlobalWorkshops();
+        startGlobalWorkshopsListener();
+        await new Promise(r => setTimeout(r, 500));
+        return processInviteToken(retryCount + 1);
+      } else {
+        warn("🔍 No workshops loaded after retries");
+        toast("Atölyeler yüklenemedi. Lobi yenilemeyi deneyin.");
+        ls.del('atolye-invite');
+        return;
+      }
+    }
+
+    // Case-insensitive, trimmed comparison for invite token
+    const targetWorkshop = S.workshops.find(w =>
+      w.inviteToken && w.inviteToken.trim().toLowerCase() === storedInviteToken.trim().toLowerCase() && !w.isDeleted
+    );
+
     if (targetWorkshop) {
       // Check if user is logged in
       if (S.meId) {
         // User is logged in, join the workshop immediately
+        log("🔍 Joining workshop via invite:", targetWorkshop.id);
         await joinWorkshop(targetWorkshop.id);
         toast("Atölyeye davet edildiniz! Hoş geldiniz!");
       } else {
@@ -436,8 +457,12 @@ async function boot() {
         log("🔍 Valid invitation token found, waiting for login");
       }
     } else {
-      warn("🔍 Invalid invitation token, no workshop found with this token");
-      toast("Geçersiz davet kodu!");
+      warn("🔍 Invalid invitation token, no workshop found with this token", {
+        token: storedInviteToken,
+        workshopCount: S.workshops.length,
+        tokens: S.workshops.map(w => w.inviteToken).filter(Boolean)
+      });
+      toast("Geçersiz davet kodu! Kodu kontrol edin veya lobiyi yenileyin.");
     }
     ls.del('atolye-invite');
   }
@@ -550,13 +575,53 @@ function addWorkshopToUser(workshop) {
 
 function startGlobalWorkshopsListener() {
   if (S.globalWorkshopsUnsub || !S.db) return;
-  S.globalWorkshopsUnsub = S.db.collection("workshops")
-    .where("isDeleted", "==", false)
-    .onSnapshot(snapshot => {
-      const workshops = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      S.workshops = workshops;
-      renderLobby();
-    }, err => warn("Workshops listener error:", err));
+
+  // Primary: indexed query (requires Firestore index)
+  const tryIndexedQuery = () => {
+    S.globalWorkshopsUnsub = S.db.collection("workshops")
+      .where("isDeleted", "==", false)
+      .onSnapshot(snapshot => {
+        const workshops = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        S.workshops = workshops.filter(w => !w.isDeleted);
+        renderLobby();
+      }, err => {
+        warn("Workshops indexed query error:", err);
+        // Fallback: load all workshops and filter in memory
+        fallbackToFullScan();
+      });
+  };
+
+  const fallbackToFullScan = () => {
+    if (S.globalWorkshopsUnsub) {
+      try { S.globalWorkshopsUnsub(); } catch {}
+      S.globalWorkshopsUnsub = null;
+    }
+    log("🔄 Fallback: loading all workshops (no index)...");
+    S.db.collection("workshops")
+      .get()
+      .then(snapshot => {
+        const workshops = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(w => !w.isDeleted);
+        S.workshops = workshops;
+        renderLobby();
+        // Listen for real-time updates (without index filter)
+        S.globalWorkshopsUnsub = S.db.collection("workshops")
+          .onSnapshot(snapshot => {
+            const workshops = snapshot.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .filter(w => !w.isDeleted);
+            S.workshops = workshops;
+            renderLobby();
+          }, err => warn("Workshops fallback listener error:", err));
+      })
+      .catch(err => {
+        warn("Workshops fallback load error:", err);
+        toast("Atölyeler yüklenemedi. Index eksik olabilir.");
+      });
+  };
+
+  tryIndexedQuery();
 }
 
 async function createWorkshop(gameName) {
