@@ -1046,6 +1046,27 @@ addSafeListener($("f-login"), "submit", async e => {
   // Load user's workshops from localStorage
   loadUserWorkshops();
 
+  // Process invite token after login if present
+  const storedInviteToken = ls.get('atolye-invite');
+  if (storedInviteToken) {
+    log("🔍 Processing invite token after login:", storedInviteToken);
+    // Wait for global workshops to load
+    let attempts = 0;
+    while ((!S.workshops || S.workshops.length === 0) && attempts < 30) {
+      await new Promise(r => setTimeout(r, 100));
+      attempts++;
+    }
+    const targetWorkshop = S.workshops.find(w => w.inviteToken && w.inviteToken.trim().toLowerCase() === storedInviteToken.trim().toLowerCase() && !w.isDeleted);
+    if (targetWorkshop) {
+      await joinWorkshop(targetWorkshop.id);
+      toast("Atölyeye davet edildiniz! Hoş geldiniz!");
+    } else {
+      warn("🔍 Invalid invitation token after login, no workshop found with this token");
+      toast("Geçersiz davet kodu!");
+    }
+    ls.del('atolye-invite');
+  }
+
   err.textContent = "";
   log("🔍 Calling route() - showing lobby");
   route();
@@ -1082,16 +1103,23 @@ addSafeListener($("f-create-workshop"), "submit", async e => {
   const gameName = $("cw-game").value.trim();
   const err = $("cw-err");
   if (!gameName) { err.textContent = "Atölye adı girin."; return; }
-  const workshop = await createWorkshop(gameName);
-  if (workshop) {
-    const modal = $("create-workshop-modal");
-    if (modal) modal.hidden = true;
-    $("cw-game").value = "";
-    toast("Atölye oluşturuldu!");
-    renderLobby();
-    // Auto-switch to new workshop
-    switchWorkshop(workshop.id);
-    showApp();
+  try {
+    const workshop = await createWorkshop(gameName);
+    if (workshop) {
+      const modal = $("create-workshop-modal");
+      if (modal) modal.hidden = true;
+      $("cw-game").value = "";
+      toast("Atölye oluşturuldu!");
+      renderLobby();
+      // Auto-switch to new workshop
+      switchWorkshop(workshop.id);
+      showApp();
+    } else {
+      err.textContent = "Atölye oluşturulamadı. Lütfen tekrar deneyin.";
+    }
+  } catch (e) {
+    log("Workshop creation error:", e);
+    err.textContent = "Kaydedilemedi: " + (e.message || "bilinmiyor") + ". Bağlantınızı kontrol edip tekrar deneyin.";
   }
 });
 
