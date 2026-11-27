@@ -2434,22 +2434,21 @@ async function createWorkshop(gameName) {
     isDeleted: false
   };
 
-  // Add to global workshops
-  S.workshops.push(workshopData);
-
-  // Save to Firebase or localStorage
+  // Save to Firebase first (must succeed for global visibility)
   if (S.db) {
     try {
       await S.db.collection("workshops").doc(workshopId).set(workshopData);
       log("🔍 Workshop created in Firebase:", workshopId);
     } catch (e) {
       warn("Firebase workshop create error:", e);
-      // Fallback to localStorage
-      saveGlobalWorkshops(S.workshops);
+      throw new Error("Atölye Firebase'e kaydedilemedi: " + (e.message || "bilinmiyor") + ". Bağlantınızı kontrol edin.");
     }
   } else {
-    saveGlobalWorkshops(S.workshops);
+    throw new Error("Firebase bağlantısı yok. Çevrimdışı modda atölye oluşturulamaz.");
   }
+
+  // Add to global workshops (local cache)
+  S.workshops.push(workshopData);
 
   // Also add to user's local workshops for backward compatibility
   addWorkshopToUser({ id: workshopId, game: workshopData.game, inviteToken: workshopData.inviteToken, createdAt: now });
@@ -2908,7 +2907,8 @@ addSafeListener($("f-create-workshop"), "submit", async e => {
     }
   } catch (e) {
     log("Workshop creation error:", e);
-    err.textContent = "Kaydedilemedi: " + (e.message || "bilinmiyor") + ". Bağlantınızı kontrol edip tekrar deneyin.";
+    const msg = e.message || (e.code ? "Kod: " + e.code : "bilinmiyor");
+    err.textContent = "Kaydedilemedi: " + msg + ". Bağlantınızı kontrol edip tekrar deneyin.";
   }
 });
 
