@@ -2386,29 +2386,22 @@ function addWorkshopToUser(workshop) {
 function startGlobalWorkshopsListener() {
   if (S.globalWorkshopsUnsub || !S.db) return;
 
-  // Always use fallback approach (load all, filter in memory) to avoid Firestore index issues
-  log("🔄 Loading all workshops (fallback mode - no index required)...");
-  S.db.collection("workshops")
-    .get()
-    .then(snapshot => {
+  // Use onSnapshot for one-time fetch + real-time updates (works with both Firebase and mock)
+  log("🔄 Loading all workshops (no index required)...");
+  let firstLoad = true;
+  S.globalWorkshopsUnsub = S.db.collection("workshops")
+    .onSnapshot(snapshot => {
       const workshops = snapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(w => !w.isDeleted);
       S.workshops = workshops;
       renderLobby();
-      log("🔍 Loaded", workshops.length, "global workshops");
-      // Listen for real-time updates (without index filter)
-      S.globalWorkshopsUnsub = S.db.collection("workshops")
-        .onSnapshot(snapshot => {
-          const workshops = snapshot.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(w => !w.isDeleted);
-          S.workshops = workshops;
-          renderLobby();
-        }, err => warn("Workshops listener error:", err));
-    })
-    .catch(err => {
-      warn("Workshops load error:", err);
+      if (firstLoad) {
+        log("🔍 Loaded", workshops.length, "global workshops");
+        firstLoad = false;
+      }
+    }, err => {
+      warn("Workshops listener error:", err);
       toast("Atölyeler yüklenemedi. Bağlantıyı kontrol edin.");
     });
 }
