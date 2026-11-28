@@ -523,21 +523,36 @@ function loadUserWorkshops() {
 }
 
 function loadGlobalWorkshops() {
-  // Firebase will handle real-time updates via listener
-  // This is for localStorage fallback only
+  // Always do an initial load, then the listener will keep it updated
   if (S.db) {
-    log("🔍 Firebase available, global workshops will be loaded via listener");
-    return;
+    log("🔍 Firebase available, loading global workshops...");
+    S.db.collection("workshops")
+      .get()
+      .then(snapshot => {
+        const workshops = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(w => w.isDeleted !== true);
+        S.workshops = workshops;
+        log("🔍 Loaded global workshops from Firebase:", S.workshops.length);
+        renderLobby();
+      })
+      .catch(err => {
+        warn("Global workshops load error:", err);
+        S.workshops = [];
+        renderLobby();
+      });
+  } else {
+    try {
+      const stored = ls.get(GLOBAL_WORKSHOPS_KEY);
+      S.workshops = stored ? JSON.parse(stored) : [];
+      log("🔍 Loaded global workshops from localStorage:", S.workshops);
+      renderLobby();
+    } catch (e) {
+      warn("Global workshops load error:", e);
+      S.workshops = [];
+      renderLobby();
+    }
   }
-  try {
-    const stored = ls.get(GLOBAL_WORKSHOPS_KEY);
-    S.workshops = stored ? JSON.parse(stored) : [];
-    log("🔍 Loaded global workshops from localStorage:", S.workshops);
-  } catch (e) {
-    warn("Global workshops load error:", e);
-    S.workshops = [];
-  }
-  renderLobby();
 }
 
 function saveGlobalWorkshops(workshops) {
@@ -576,29 +591,10 @@ function addWorkshopToUser(workshop) {
 function startGlobalWorkshopsListener() {
   if (S.globalWorkshopsUnsub || !S.db) return;
 
-  // Always use full scan (no index needed, works with mock and Firebase)
+  // Single listener: full scan (no index needed), real-time updates
   log("🔄 Loading all workshops (no index required)...");
   let firstLoad = true;
 
-  const loadAndListen = () => {
-    S.db.collection("workshops")
-      .onSnapshot(snapshot => {
-        const workshops = snapshot.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(w => w.isDeleted !== true); // explicit true check
-        S.workshops = workshops;
-        renderLobby();
-        if (firstLoad) {
-          log("🔍 Loaded", S.workshops.length, "global workshops");
-          firstLoad = false;
-        }
-      }, err => {
-        warn("Workshops listener error:", err);
-        toast("Atölyeler yüklenemedi. Bağlantıyı kontrol edin.");
-      });
-  };
-
-  S.globalWorkshopsFirstLoad = true;
   S.globalWorkshopsUnsub = S.db.collection("workshops")
     .onSnapshot(snapshot => {
       const workshops = snapshot.docs
@@ -606,9 +602,9 @@ function startGlobalWorkshopsListener() {
         .filter(w => w.isDeleted !== true);
       S.workshops = workshops;
       renderLobby();
-      if (S.globalWorkshopsFirstLoad) {
+      if (firstLoad) {
         log("🔍 Loaded", S.workshops.length, "global workshops");
-        S.globalWorkshopsFirstLoad = false;
+        firstLoad = false;
       }
     }, err => {
       warn("Workshops listener error:", err);
